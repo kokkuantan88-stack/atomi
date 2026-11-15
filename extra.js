@@ -13,6 +13,7 @@ function getQ(qid){
     const d = (S.decks || []).find(x => x.id === m[1]); if(!d || !d.qs[+m[2]]) return null;
     return {t:{id:"deck-"+d.id, s:"notes", name:d.title, y:0, qs:d.qs}, i:+m[2]};
   }
+  if(qid.startsWith("rdeck#")){ const i = +qid.slice(6); return REMOTE_DECK && REMOTE_DECK.qs[i] ? {t:{id:"rdeck", s:"notes", name:REMOTE_DECK.title, y:0, qs:REMOTE_DECK.qs}, i} : null; }
   return QMAP[qid] || null;
 }
 function awardGame(xp, extra){
@@ -107,7 +108,7 @@ function vNotes(){
   if(!decks.length) h += '<p class="muted">No decks yet. Your first one will appear here.</p>';
   decks.forEach(d => {
     h += '<div class="trow"><div style="display:flex;flex-direction:column;gap:4px"><b>'+esc(d.title)+'</b><span class="small muted">'+d.cards.length+' flashcards · '+d.qs.length+' questions · made '+esc(d.made)+'</span></div><div></div>'+
-      '<div class="acts"><button class="btn btn-sm btn-primary" data-act="cards" data-id="'+d.id+'">Flashcards</button><button class="btn btn-sm" data-act="quiz" data-k="deck" data-arg="'+d.id+'">Quiz me</button><button class="btn btn-sm" data-act="game-match" data-deck="'+d.id+'">Match game</button><button class="btn btn-sm" data-act="deck-del" data-id="'+d.id+'" aria-label="Delete '+esc(d.title)+'">Delete</button></div></div>';
+      '<div class="acts"><button class="btn btn-sm btn-primary" data-act="cards" data-id="'+d.id+'">Flashcards</button><button class="btn btn-sm" data-act="quiz" data-k="deck" data-arg="'+d.id+'">Quiz me</button><button class="btn btn-sm" data-act="game-match" data-deck="'+d.id+'">Match game</button><button class="btn btn-sm" data-act="src-play" data-deck="'+d.id+'">Arcade games</button><button class="btn btn-sm" data-act="deck-del" data-id="'+d.id+'" aria-label="Delete '+esc(d.title)+'">Delete</button></div></div>';
   });
   h += '</section>';
   return h;
@@ -203,7 +204,8 @@ const ELEMENTS = [["H","Hydrogen",1,1],["He","Helium",4,2],["Li","Lithium",7,3],
 const IONS = {Li:1,Na:1,K:1,Mg:2,Ca:2,Al:3,O:-2,S:-2,F:-1,Cl:-1,N:-3};
 let GAME = null;
 
-function vGames(){
+function vGames(){ return vArcadeHub(); }
+function vGamesOld(){
   const best = S.best || {};
   const card = (act, title, sci, desc, bestTxt, extra) => '<div class="card game"><div><h2>'+title+'</h2><span class="tag" style="--cs:var(--accent-soft);--c:var(--accent)">'+sci+'</span></div><p class="muted">'+desc+'</p>'+(bestTxt ? '<p class="small"><b>Your best:</b> '+bestTxt+'</p>' : '')+(extra || '<button class="btn btn-primary" data-act="'+act+'">Play</button>')+'</div>';
   let h = '<section style="display:flex;flex-direction:column;gap:6px"><h1>Games</h1><p class="muted">Science mini games. Every game earns XP for Atomi.</p></section><div class="grid g2">';
@@ -294,9 +296,9 @@ function vAtom(){
 }
 
 /* Speed Blitz */
-function startBlitz(s){
+function startBlitz(s, given){
   const ts = s === "all" ? TOPICS.filter(isOn) : TOPICS.filter(t => t.s === s);
-  const pool = shuffle(poolFor(ts.length ? ts : TOPICS));
+  const pool = given && given.length ? given : shuffle(poolFor(ts.length ? ts : TOPICS));
   GAME = {type:"blitz", s, pool, i:0, q:makeQ(pool[0]), score:0, streak:0, correct:0, wrong:0, ends:Date.now() + 60000, flash:null, result:null, timer:null};
   GAME.timer = setInterval(() => { if(!GAME || GAME.type !== "blitz"){ return; } if(Date.now() >= GAME.ends) finishBlitz(); else { const el = document.getElementById("blitz-time"); if(el) el.textContent = Math.ceil((GAME.ends - Date.now())/1000) + "s"; const b = document.getElementById("blitz-bar"); if(b) b.style.width = Math.max(0, (GAME.ends - Date.now()) / 600) + "%"; } }, 250);
   go("game");
@@ -336,6 +338,8 @@ function vBlitz(){
 
 function vGame(){
   if(!GAME) return vGames();
+  if(GAME.type === "arcade") return vArcade();
+  if(GAME.type === "story") return vStory();
   if(GAME.type === "match") return vMatch();
   if(GAME.type === "atom") return vAtom();
   if(GAME.type === "blitz") return vBlitz();
@@ -354,18 +358,30 @@ async function battleEnter(code, host){
   let room;
   try{ room = await ROOM.join("battle-" + code); }
   catch(e){ toast(e && e.code === "not_permitted" ? "You need Contributor access to play battles. Ask the app's owner." : "Couldn't join that room. Try again."); return; }
-  BT = {code, host, room, phase:"wait", s:"all", qids:null, i:0, score:0, q:null, peers:[], picked:null, rewarded:false, result:null};
+  BT = {code, host, room, phase:"wait", mode:host ? (BT_PREF.mode || "classic") : "classic", s:"all", src:null, startAt:0, qids:null, i:0, score:0, q:null, peers:[], picked:null, rewarded:false, result:null};
   room.onPeers(ch => {
     if(!BT || BT.room !== room) return;
     BT.peers = ch.peers;
-    if(BT.host && BT.qids && ch.joined.length) room.emit("battle", {type:"start", qids:BT.qids, s:BT.s}).catch(() => {});
+    if(BT.host && BT.qids && ch.joined.length) room.emit("battle", battleStartMsg()).catch(() => {});
     if(view === "battle") render();
   });
   room.on("battle", msg => {
-    if(!BT || BT.room !== room || BT.qids) return;
+    if(!BT || BT.room !== room) return;
     const d = msg.data || {};
+    if((d.type === "steal" || d.type === "swap") && !msg.sameTab){ arcOnMessage(d); return; }
+    if(BT.qids) return;
     if(d.type !== "start" || !Array.isArray(d.qids)) return;
-    const qids = d.qids.filter(id => typeof id === "string" && QMAP[id]).slice(0, 12);
+    const rd = remoteDeckFrom(d.deck); if(d.deck && !rd) return;
+    if(rd) REMOTE_DECK = rd;
+    const src = rd ? {s:"notes", topics:[], deck:"remote"} : srcClean({s:typeof d.s === "string" ? d.s : "all", topics:d.topics});
+    BT.src = src;
+    if(ARC_MODES[d.mode]){
+      const left = Math.max(10, Math.min(300, Number(d.left) || 180));
+      BT.qids = ["x"]; BT.mode = d.mode; BT.phase = "arcade";
+      startArcade(d.mode, src, true, left);
+      return;
+    }
+    const qids = d.qids.filter(id => typeof id === "string" && getQ(id) && (id.startsWith("rdeck#") || QMAP[id])).slice(0, 12);
     if(!qids.length) return;
     BT.qids = qids; BT.s = typeof d.s === "string" ? d.s : "all"; BT.phase = "play"; BT.i = 0; BT.q = makeQ(qids[0]);
     if(view === "battle") render();
@@ -380,11 +396,28 @@ function battlePresence(){
 async function battleLeave(silent){
   if(!BT) return;
   const r = BT.room; BT = null;
+  if(ROOM) ROOM.presence({invite:null}).catch(() => {});
   try{ await r.leave(); }catch(e){}
   if(!silent) go("games");
 }
+function battleStartMsg(){
+  const src = BT.hostSrc || srcClean(SRC), base = {type:"start", s:src.s, topics:src.topics};
+  if(BT.deckPack) base.deck = BT.deckPack;
+  if(ARC_MODES[BT.mode]) return Object.assign(base, {mode:BT.mode, qids:[], left:Math.max(10, Math.round((BT.startAt + 180000 - Date.now()) / 1000))});
+  return Object.assign(base, {qids:BT.sentQids || []});
+}
 function battleStart(){
   if(!BT || !BT.host || BT.qids) return;
+  BT.hostSrc = srcClean(SRC);
+  if(SRC_NOTES && !BT.hostSrc.deck){ toast("Pick one of your notes decks first."); return; }
+  BT.deckPack = BT.hostSrc.deck ? packDeck(BT.hostSrc.deck) : null;
+  if(BT.hostSrc.deck && !BT.deckPack){ toast("That deck has no questions to share."); return; }
+  if(!ARC_MODES[BT.mode]){
+    BT.sentQids = BT.deckPack ? shuffle(BT.deckPack.qs.map((_, i) => "rdeck#" + i)).slice(0, BATTLE_N) : srcPool(BT.hostSrc).slice(0, BATTLE_N);
+    BT.room.emit("battle", battleStartMsg()).catch(e => toast(e && e.code === "not_permitted" ? "You need Contributor access to start battles." : "Couldn't start. Try again."));
+    return;
+  }
+  if(ARC_MODES[BT.mode]){ BT.startAt = Date.now(); BT.room.emit("battle", battleStartMsg()).catch(e => toast(e && e.code === "not_permitted" ? "You need Contributor access to start battles." : "Couldn't start. Try again.")); return; }
   const ts = BT.s === "all" ? TOPICS.filter(t => t.y <= S.level) : TOPICS.filter(t => t.s === BT.s && t.y <= S.level);
   const qids = shuffle(poolFor(ts.length ? ts : TOPICS)).slice(0, BATTLE_N);
   BT.room.emit("battle", {type:"start", qids, s:BT.s}).catch(e => toast(e && e.code === "not_permitted" ? "You need Contributor access to start battles." : "Couldn't start. Try again."));
@@ -444,7 +477,8 @@ function vBattle(){
   let h = '<section class="card" style="display:flex;flex-direction:column;gap:14px"><div class="row between"><div><h1>Quiz Battle</h1><p class="muted">Room code <b class="code">'+esc(BT.code)+'</b> · '+ps.length+' player'+(ps.length===1?'':'s')+'</p></div><button class="btn btn-sm" data-act="bt-leave">Leave room</button></div>';
   if(BT.phase === "wait"){
     h += '<p class="bubble">Share the code <b>'+esc(BT.code)+'</b> with your friends. '+(BT.host ? 'Pick a subject and press Start when everyone has joined.' : 'Waiting for the host to start…')+'</p>';
-    if(BT.host) h += '<div><h3 style="margin-bottom:8px">Subject</h3>'+subjChips(BT.s, "bt-s", true)+'</div><div><button class="btn btn-primary btn-big" data-act="bt-start">Start battle ('+BATTLE_N+' questions)</button></div>';
+    const mName = ARC_MODES[BT.mode] ? ARC_MODES[BT.mode].name : "Classic Quiz Battle";
+    if(BT.host) h += '<div><h3 style="margin-bottom:8px">Game mode</h3><div class="tabs" role="group" aria-label="Game mode">'+[["rush","Stardust Rush"],["gold","Orbit Gold"],["race","Rocket Race"],["classic","Classic"]].map(([k, n]) => '<button data-act="bt-mode" data-m="'+k+'" aria-pressed="'+(BT.mode===k)+'">'+n+'</button>').join("")+'</div><p class="small muted" style="margin-top:6px">'+esc(ARC_MODES[BT.mode] ? ARC_MODES[BT.mode].desc : "Everyone answers the same 8 questions. Highest score wins.")+'</p></div><div><h3 style="margin-bottom:8px">Questions from</h3>'+srcPicker()+(SRC_NOTES ? '<p class="small muted">Your friends get a copy of the questions from your deck for this game.</p>' : '')+'</div><div><button class="btn btn-primary btn-big" data-act="bt-start">Start '+esc(mName)+'</button></div>';
     h += board;
   } else if(BT.phase === "play"){
     const q = BT.q, pk = BT.picked;
@@ -492,6 +526,7 @@ document.addEventListener("click", e => {
   else if(a === "bt-leave") battleLeave(false);
   else if(a === "bt-s"){ if(BT){ BT.s = b.dataset.s; render(); } }
   else if(a === "bt-start") battleStart();
+  else if(a === "bt-mode"){ if(BT && BT.host && !BT.qids){ BT.mode = b.dataset.m; BT_PREF.mode = BT.mode; render(); } }
   else if(a === "bt-ans") battleAnswer(Number(b.dataset.k));
   else if(a === "bt-again"){ battleLeave(true).then(() => go("battle")); }
 });
@@ -504,4 +539,117 @@ document.addEventListener("change", e => {
 document.addEventListener("submit", e => {
   if(e.target.id === "notesform"){ e.preventDefault(); const t = document.getElementById("notes-text"); makeDeck(t ? t.value : ""); }
   else if(e.target.id === "btjoin"){ e.preventDefault(); battleEnter(document.getElementById("bt-code").value, false); }
+});
+
+/* ---------- Friends: add by private code, see stats, invite to battles ---------- */
+let LOBBY = [];            // everyone with the app open right now (room lobby)
+let FR = {msg:"", busy:false};
+const FC_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function ensureFriendCode(){
+  if(typeof S.friendCode === "string" && /^[A-Z2-9]{6}$/.test(S.friendCode)) return S.friendCode;
+  let c = ""; for(let i=0;i<6;i++) c += FC_CHARS[Math.floor(Math.random() * FC_CHARS.length)];
+  S.friendCode = c; save(); return c;
+}
+function friendList(){ return Array.isArray(S.friends) ? S.friends.filter(f => f && typeof f.id === "string") : []; }
+function playerDoc(id){ return BOARD.find(p => p.id === id) || null; }
+function onlineIds(){ return new Set(LOBBY.filter(p => p.by && !p.isMe).map(p => p.by)); }
+function lobbyWatch(){
+  if(!ROOM || ROOM._atomiWatched) return;
+  try{
+    ROOM.onPeers(ch => { LOBBY = ch.peers; if(["friends","home","explore","games","notes","dress","me","board"].includes(view)) render(); });
+  }catch(e){}
+}
+function pendingInvites(){
+  if(!ROOM || !UID) return [];
+  const mine = new Set(friendList().map(f => f.id));
+  const now = Date.now();
+  return LOBBY.filter(p => !p.isMe && p.by && mine.has(p.by) && p.presence && p.presence.invite &&
+    Array.isArray(p.presence.invite.to) && p.presence.invite.to.includes(UID) &&
+    typeof p.presence.invite.code === "string" && /^[a-z0-9]{3,8}$/.test(p.presence.invite.code) &&
+    now - Number(p.presence.invite.at || 0) < 10 * 60 * 1000 && !(BT && BT.code === p.presence.invite.code))
+    .map(p => ({from:(friendList().find(f => f.id === p.by) || {}).nick || String(p.presence.nick || "A friend").slice(0, 20), code:p.presence.invite.code}));
+}
+function invitesBanner(){
+  const inv = pendingInvites();
+  if(!inv.length) return "";
+  return inv.slice(0, 3).map(i => '<section class="card invite row between"><p><b>'+esc(i.from)+'</b> invited you to a Quiz Battle!</p><button class="btn btn-primary btn-sm" data-act="fr-join" data-code="'+esc(i.code)+'">Join battle</button></section>').join("");
+}
+async function addFriend(raw){
+  const code = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if(code.length !== 6){ FR.msg = "Friend codes have 6 letters and numbers."; render(); return; }
+  if(code === ensureFriendCode()){ FR.msg = "That's your own code. Ask a friend for theirs!"; render(); return; }
+  if(mode !== "cloud" || !DB){ FR.msg = "Adding friends needs the app open on claude.ai while signed in."; render(); return; }
+  FR.busy = true; FR.msg = "Looking for your friend…"; render();
+  let found = BOARD.find(p => p.friendCode === code);
+  if(!found){
+    try{ const snap = await DB.collection("players").where("friendCode", "==", code).limit(1).get(); if(!snap.empty) found = Object.assign({id:snap.docs[0].id}, snap.docs[0].data()); }catch(e){}
+  }
+  FR.busy = false;
+  if(!found){ FR.msg = "No one has that code. Check it with your friend (they need to have opened the app on claude.ai)."; render(); return; }
+  if(found.id === UID){ FR.msg = "That's your own code."; render(); return; }
+  if(friendList().some(f => f.id === found.id)){ FR.msg = String(found.name || "They").slice(0, 20) + " is already your friend."; render(); return; }
+  if(friendList().length >= 50){ FR.msg = "You can have up to 50 friends."; render(); return; }
+  S.friends = friendList().concat({id:found.id, nick:String(found.name || "Friend").slice(0, 20), added:today()});
+  const nb = checkBadges();
+  save();
+  FR.msg = "Added " + String(found.name || "your friend").slice(0, 20) + "! Ask them to add your code too." + (nb.length ? " New badge!" : "");
+  render();
+}
+function removeFriend(id){ S.friends = friendList().filter(f => f.id !== id); save(); render(); toast("Friend removed"); }
+async function inviteFriend(id){
+  if(!ROOM){ toast("Battles need the app open on claude.ai."); return; }
+  if(!BT) await battleEnter(battleCode(), true);
+  if(!BT) return;
+  BT.invited = Array.from(new Set((BT.invited || []).concat(id))).slice(0, 20);
+  ROOM.presence({invite:{to:BT.invited, code:BT.code, at:Date.now()}}).catch(() => {});
+  toast("Invite sent! They'll see it if the app is open.");
+  go("battle");
+}
+function vFriends(){
+  const code = ensureFriendCode(), fl = friendList(), online = onlineIds(), wk = weekKey();
+  let h = invitesBanner();
+  h += '<section class="card" style="display:flex;flex-direction:column;gap:14px"><div><h1>Friends</h1><p class="muted">Add friends with their friend code to see their progress, compare XP and battle them.</p></div>';
+  if(mode !== "cloud"){
+    h += '<p class="notice">Friends work when the app is opened on claude.ai while signed in, and shared with your friends as Contributors.</p></section>';
+    return h;
+  }
+  h += '<div class="grid g2"><div class="card" style="background:var(--panel);display:flex;flex-direction:column;gap:8px"><h2>Your friend code</h2><p class="fcode">'+esc(code)+'</p>'+
+    '<p class="small muted">Share it only with people you know. Anyone with your code can add you.</p><div><button class="btn btn-sm" data-act="fr-copy">Copy code</button></div></div>'+
+    '<form id="fradd" class="card" style="background:var(--panel);display:flex;flex-direction:column;gap:8px"><h2>Add a friend</h2><label for="fr-code" class="small" style="font-weight:800">Their friend code</label>'+
+    '<input type="text" id="fr-code" maxlength="8" placeholder="e.g. K7QM2X" autocomplete="off" style="text-transform:uppercase"'+(FR.busy?' disabled':'')+'><div><button class="btn btn-primary" type="submit"'+(FR.busy?' disabled':'')+'>Add friend</button></div>'+
+    (FR.msg ? '<p class="small" role="status" style="font-weight:700">'+esc(FR.msg)+'</p>' : '')+'</form></div></section>';
+  // friends list
+  h += '<section class="card" style="display:flex;flex-direction:column;gap:6px"><h2>Your friends ('+fl.length+')</h2>';
+  if(!fl.length) h += '<p class="muted">No friends yet. Swap codes with a classmate to get started.</p>';
+  fl.forEach(f => {
+    const p = playerDoc(f.id), on = online.has(f.id);
+    const stg = p ? Math.max(0, Math.min(4, Number(p.stage) || 0)) : 0;
+    const name = String((p && p.name) || f.nick || "Friend").slice(0, 20);
+    h += '<div class="trow fr-row"><div class="row" style="flex-wrap:nowrap;gap:10px"><span style="width:52px;flex:none">'+atomi(stg, on ? "happy" : "ready", {look:p && p.look})+'</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>'+esc(name)+'</b>'+
+      '<span class="small muted">'+(p ? STAGES[stg].name+' · '+(Number(p.xp)||0).toLocaleString()+' XP · '+(Number(p.streak)||0)+'-day streak' : 'Stats not shared yet')+'</span>'+
+      '<span class="small" style="font-weight:800;color:'+(on?'var(--good)':'var(--muted)')+'">'+(on ? '● Online now' : '○ Offline')+'</span></div></div><div></div>'+
+      '<div class="acts">'+(on && ROOM ? '<button class="btn btn-sm btn-primary" data-act="fr-invite" data-id="'+esc(f.id)+'">Invite to battle</button>' : '')+
+      '<button class="btn btn-sm" data-act="fr-remove" data-id="'+esc(f.id)+'" aria-label="Remove '+esc(name)+'">Remove</button></div></div>';
+  });
+  h += '</section>';
+  // friends leaderboard
+  const rows = [{id:UID, name:S.name, xp:S.xp, weekXp:S.weekKey === wk ? S.weekXp : 0, stage:stageOf(S.xp), look:S.look, me:true}]
+    .concat(fl.map(f => { const p = playerDoc(f.id); return p ? {id:f.id, name:p.name || f.nick, xp:Number(p.xp)||0, weekXp:p.weekKey === wk ? Number(p.weekXp)||0 : 0, stage:Math.max(0, Math.min(4, Number(p.stage)||0)), look:p.look} : null; }).filter(Boolean))
+    .sort((a, b) => b.weekXp - a.weekXp);
+  h += '<section class="card" style="display:flex;flex-direction:column;gap:10px"><div class="row between"><h2>Friends leaderboard this week</h2><button class="btn btn-sm" data-act="go" data-v="board">Everyone</button></div>'+
+    '<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Player</th><th>Stage</th><th class="num">Week XP</th></tr></thead><tbody>'+
+    rows.map((r, i) => '<tr'+(r.me?' class="me"':'')+'><td>'+(i+1)+'</td><td><div class="row" style="gap:8px;flex-wrap:nowrap"><span style="width:30px;flex:none">'+atomi(r.stage, "ready", {look:r.look})+'</span>'+esc(String(r.name||"Player").slice(0,20))+(r.me?' (you)':'')+'</div></td><td>'+STAGES[r.stage].name+'</td><td class="num">'+r.weekXp.toLocaleString()+'</td></tr>').join("")+
+    '</tbody></table></div></section>';
+  return h;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if(!b) return;
+  const a = b.dataset.act;
+  if(a === "fr-copy"){ const c = ensureFriendCode(); try{ navigator.clipboard.writeText(c).then(() => toast("Copied " + c), () => toast("Your code is " + c)); }catch(err){ toast("Your code is " + c); } }
+  else if(a === "fr-remove"){ if(b.dataset.confirm === "1") removeFriend(b.dataset.id); else { b.dataset.confirm = "1"; b.textContent = "Tap again to remove"; } }
+  else if(a === "fr-invite") inviteFriend(b.dataset.id);
+  else if(a === "fr-join") battleEnter(b.dataset.code, false);
+});
+document.addEventListener("submit", e => {
+  if(e.target.id === "fradd"){ e.preventDefault(); addFriend(document.getElementById("fr-code").value); }
 });
