@@ -298,12 +298,34 @@ body{background-image:radial-gradient(2px 2px at 12% 18%,rgba(255,255,255,.5),tr
 .src{display:flex;flex-direction:column;gap:10px}
 .src-topics{max-height:190px;overflow:auto;padding:2px}
 .src-topics button .muted{font-weight:600;font-size:.78rem}
+.nav-dot{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:999px;background:var(--star);color:var(--on-star);font-size:.72rem;font-weight:800}
+.box-card{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.box-card.idle{flex-direction:row;flex-wrap:wrap;text-align:left;align-items:center}
+.box-art{width:120px;position:relative;flex:none}.box-art svg{width:100%;height:auto;display:block}
+.box-art.dim{opacity:.45}
+.box-count{position:absolute;top:0;right:0;background:var(--star);color:var(--on-star);font-family:var(--font-display);font-weight:700;border-radius:999px;min-width:28px;height:28px;display:grid;place-items:center;border:2px solid var(--bg)}
+.wiggle svg{animation:wiggle 2.2s ease-in-out infinite}
+.shaking svg{animation:shake .3s linear infinite}
+@keyframes wiggle{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-6deg)}90%{transform:rotate(6deg)}95%{transform:rotate(-3deg)}}
+.box-prize{width:170px;animation:pop .5s ease-out}
+.rar-tag{font-family:var(--font-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;background:var(--panel)}
+.rar{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.rar-common .rar-tag,.rar.rar-common{color:var(--muted)}
+.rar-rare .rar-tag,.rar.rar-rare{color:var(--phy)}
+.rar-epic .rar-tag,.rar.rar-epic{color:#ffb3e1}
+.rar-legendary .rar-tag,.rar.rar-legendary{color:var(--star)}
+.box-card.rar-epic{box-shadow:0 0 0 2px #ffb3e1,0 0 32px rgba(255,179,225,.35)}
+.box-card.rar-legendary{box-shadow:0 0 0 2px var(--star),0 0 40px rgba(255,228,144,.45)}
+:root[data-theme="light"] .rar-epic .rar-tag,:root[data-theme="light"] .rar.rar-epic{color:#a3307a}
+:root[data-theme="light"] .rar-legendary .rar-tag,:root[data-theme="light"] .rar.rar-legendary{color:#8a5a00}
+@media (prefers-reduced-motion:reduce){.wiggle svg,.shaking svg,.box-prize{animation:none}}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"><p class="muted">Loading Atomi…</p></div>
 <script src="questions.js"></script>
 <script src="lessons.js"></script>
+<script src="lower.js"></script>
 <script src="extra.js"></script>
 <script src="arcade.js"></script>
 <script src="story.js"></script>
@@ -353,7 +375,7 @@ function stageOf(xp){ let s = 0; STAGES.forEach((st,i) => { if(xp >= st.xp) s = 
 /* ---------- state ---------- */
 function fresh(){
   return {v:1,name:"",level:3,xp:0,streak:0,lastDay:null,quizzes:0,weekKey:"",weekXp:0,
-    topics:{},review:{},badges:[],answered:0,correct:0,fixed:0,subjDone:{},hideBoard:false,learn:{},lastSubj:"phy",decks:[],best:{},games:0,wins:0,friends:[],friendCode:"",mute:false,story:{done:{}},look:{theme:"classic",hat:null,band:null,scarf:null,cape:null,glasses:null}};
+    topics:{},review:{},badges:[],answered:0,correct:0,fixed:0,subjDone:{},hideBoard:false,learn:{},lastSubj:"phy",decks:[],best:{},games:0,wins:0,friends:[],friendCode:"",mute:false,story:{done:{}},owned:[],boxes:1,boxXp:0,look:{theme:"classic",hat:null,band:null,scarf:null,cape:null,glasses:null}};
 }
 let S = fresh();
 let mode = "local";          // "cloud" when saved to the artifact's database
@@ -395,7 +417,10 @@ async function pushBoard(){
 
 /* ---------- derived values ---------- */
 function tstate(id){ return S.topics[id] || (S.topics[id] = {a:[]}); }
-function isOn(t){ const st = S.topics[t.id]; if(st && typeof st.off === "boolean") return !st.off; return t.y <= S.level; }
+function isOn(t){ const st = S.topics[t.id]; if(st && typeof st.off === "boolean") return !st.off; return t.y <= S.level && (S.level <= 2 || t.y >= 3); }
+// Lower secondary (Y1-2) and upper secondary (Y3-4) students each see their own stage first
+function stageSort(ts){ const r = t => ((t.y >= 3) === (S.level >= 3) ? 0 : 10) + t.y; return ts.slice().sort((a, b) => r(a) - r(b)); }
+const YEAR_OPTS = [[1,"Year 1 science (Sec 1 / Grade 7)"],[2,"Year 2 science (Sec 2 / Grade 8)"],[3,"Year 3 science (Sec 3 / Grade 9)"],[4,"Year 4 science (Sec 4 / Grade 10)"]];
 function mastery(id){ const a = (S.topics[id] && S.topics[id].a) || []; if(!a.length) return 0; return Math.round(a.reduce((x,y)=>x+y,0) / a.length * 100); }
 function tried(id){ return ((S.topics[id] && S.topics[id].a) || []).length; }
 function subjMastery(s){ const ts = TOPICS.filter(t => t.s === s && isOn(t)); if(!ts.length) return 0; return Math.round(ts.reduce((x,t)=>x+mastery(t.id),0) / ts.length); }
@@ -423,6 +448,7 @@ function learnedCount(s){ return TOPICS.filter(t => (!s || t.s === s) && lstatus
 function addXp(n){
   const wk = weekKey(); if(S.weekKey !== wk){ S.weekKey = wk; S.weekXp = 0; }
   S.xp += n; S.weekXp += n;
+  if(n > 0){ S.boxXp = (S.boxXp || 0) + n; while(S.boxXp >= BOX_XP){ S.boxXp -= BOX_XP; S.boxes = (S.boxes || 0) + 1; } }
 }
 function markStudied(){
   const d = daysSince();
@@ -442,36 +468,36 @@ const THEMES = {
 const WARDROBE = [
   {slot:"theme", label:"Themes", items:[
     {id:"classic", name:"Classic", req:null},
-    {id:"pastel", name:"Pastel", req:{xp:200}},
-    {id:"nature", name:"Nature", req:{badge:"streak3"}},
-    {id:"seasonal", name:"Seasonal", req:{xp:1000}},
-    {id:"neon", name:"Neon", req:{badge:"streak7"}},
-    {id:"cosmic", name:"Cosmic", req:{xp:1500}}]},
+    {id:"pastel", name:"Pastel", req:{xp:200}, rarity:"common"},
+    {id:"nature", name:"Nature", req:{badge:"streak3"}, rarity:"rare"},
+    {id:"seasonal", name:"Seasonal", req:{xp:1000}, rarity:"rare"},
+    {id:"neon", name:"Neon", req:{badge:"streak7"}, rarity:"epic"},
+    {id:"cosmic", name:"Cosmic", req:{xp:1500}, rarity:"legendary"}]},
   {slot:"hat", label:"Hats", items:[
     {id:"wizard", name:"Wizard hat", req:null},
-    {id:"santa", name:"Santa hat", req:{xp:1000}},
-    {id:"crown", name:"Crown", req:{badge:"perfect"}},
-    {id:"frog", name:"Frog hat", req:{badge:"learn10"}}]},
+    {id:"santa", name:"Santa hat", req:{xp:1000}, rarity:"rare"},
+    {id:"crown", name:"Crown", req:{badge:"perfect"}, rarity:"legendary"},
+    {id:"frog", name:"Frog hat", req:{badge:"learn10"}, rarity:"epic"}]},
   {slot:"band", label:"Headbands", items:[
     {id:"bunny", name:"Bunny ears", req:null},
-    {id:"pinkbow", name:"Pink bow", req:{xp:500}},
-    {id:"brownbow", name:"Brown bow", req:{badge:"learn1"}},
-    {id:"flowers", name:"Flower crown", req:{badge:"streak3"}}]},
+    {id:"pinkbow", name:"Pink bow", req:{xp:500}, rarity:"common"},
+    {id:"brownbow", name:"Brown bow", req:{badge:"learn1"}, rarity:"common"},
+    {id:"flowers", name:"Flower crown", req:{badge:"streak3"}, rarity:"rare"}]},
   {slot:"scarf", label:"Scarves", items:[
     {id:"red", name:"Red scarf", req:null},
-    {id:"blue", name:"Blue scarf", req:{xp:300}},
-    {id:"green", name:"Green scarf", req:{badge:"allround"}},
-    {id:"yellow", name:"Yellow scarf", req:{xp:2000}}]},
+    {id:"blue", name:"Blue scarf", req:{xp:300}, rarity:"common"},
+    {id:"green", name:"Green scarf", req:{badge:"allround"}, rarity:"common"},
+    {id:"yellow", name:"Yellow scarf", req:{xp:2000}, rarity:"rare"}]},
   {slot:"cape", label:"Capes", items:[
-    {id:"red", name:"Red cape", req:{xp:800}},
-    {id:"blue", name:"Blue cape", req:{badge:"master"}},
-    {id:"purple", name:"Purple cape", req:{xp:1500}},
-    {id:"star", name:"Star cape", req:{xp:4000}}]},
+    {id:"red", name:"Red cape", req:{xp:800}, rarity:"rare"},
+    {id:"blue", name:"Blue cape", req:{badge:"master"}, rarity:"rare"},
+    {id:"purple", name:"Purple cape", req:{xp:1500}, rarity:"epic"},
+    {id:"star", name:"Star cape", req:{xp:4000}, rarity:"legendary"}]},
   {slot:"glasses", label:"Glasses", items:[
     {id:"round", name:"Round glasses", req:null},
-    {id:"heart", name:"Heart glasses", req:{xp:400}},
-    {id:"goggles", name:"Lab goggles", req:{xp:1200}},
-    {id:"pixel", name:"Pixel shades", req:{badge:"hundred"}}]}
+    {id:"heart", name:"Heart glasses", req:{xp:400}, rarity:"common"},
+    {id:"goggles", name:"Lab goggles", req:{xp:1200}, rarity:"rare"},
+    {id:"pixel", name:"Pixel shades", req:{badge:"hundred"}, rarity:"epic"}]}
 ];
 const DEFAULT_LOOK = {theme:"classic", hat:null, band:null, scarf:null, cape:null, glasses:null};
 function cleanLook(l){
@@ -658,7 +684,7 @@ function finishQuiz(){
   Q.bonus = 20 + (perfect ? 50 : 0); Q.xp += Q.bonus; Q.perfect = perfect;
   Q.pct = Math.round(Q.correct / n * 100);
   Q.learnedNow = false;
-  const before = unlockedSet();
+  const before = unlockedSet(); Q.boxesBefore = S.boxes || 0;
   if(Q.kind === "check" || Q.kind === "topic"){
     const l = S.learn[Q.arg] || (S.learn[Q.arg] = {});
     l.best = Math.max(l.best || 0, Q.pct);
@@ -670,7 +696,7 @@ function finishQuiz(){
   Q.list.forEach(q => { S.subjDone[q.t.s] = true; });
   if(perfect) S.perfects = (S.perfects||0) + 1;
   Q.newBadges = checkBadges();
-  const after = unlockedSet(); Q.newLooks = [...after].filter(x => !before.has(x));
+  Q.newBoxes = Math.max(0, (S.boxes || 0) - (Q.boxesBefore || 0));
   Q.stageUp = stageOf(S.xp) > Q.startStage;
   save(); pushBoard();
   go("result");
@@ -700,13 +726,54 @@ function checkBadges(){
 
 
 /* ---------- customise Atomi ---------- */
-function unlocked(req){ return !req || (req.xp !== undefined && S.xp >= req.xp) || (req.badge && S.badges.includes(req.badge)); }
-function reqText(req){
-  if(!req) return "Free";
-  if(req.xp !== undefined) return "Reach " + req.xp.toLocaleString() + " XP";
-  const b = BADGES.find(x => x.id === req.badge); return 'Earn the "' + (b ? b.name : req.badge) + '" badge';
+// Accessories come from blind boxes: one box for every BOX_XP XP earned. Starter items (req:null) are free.
+const BOX_XP = 150;
+const RARITY = {common:{name:"Common", w:60}, rare:{name:"Rare", w:28}, epic:{name:"Epic", w:10}, legendary:{name:"Legendary", w:2}};
+function owns(slot, it){ return !it.req || (S.owned || []).includes(slot + ":" + it.id); }
+function unlocked(req, slot, it){ return slot ? owns(slot, it) : !req; }
+// Old saves unlocked looks by XP and badges: keep everything they already had
+function legacyOwned(st){ const out = []; WARDROBE.forEach(g => g.items.forEach(it => { const r = it.req; if(r && ((r.xp !== undefined && st.xp >= r.xp) || (r.badge && (st.badges || []).includes(r.badge)))) out.push(g.slot + ":" + it.id); })); return out; }
+function reqText(req, it){ return !req ? "Free" : "Find it in a blind box" + (it && it.rarity ? " (" + RARITY[it.rarity].name + ")" : ""); }
+function unlockedSet(){ const out = new Set(); WARDROBE.forEach(g => g.items.forEach(it => { if(owns(g.slot, it)) out.add(g.slot+":"+it.id); })); return out; }
+function openBox(){
+  if(!(S.boxes > 0) || BOX.phase === "shake") return;
+  const pool = []; WARDROBE.forEach(g => g.items.forEach(it => { if(!owns(g.slot, it)) pool.push({slot:g.slot, it}); }));
+  S.boxes--;
+  let prize = null;
+  if(pool.length){
+    const avail = Object.keys(RARITY).filter(r => pool.some(p => p.it.rarity === r));
+    let x = Math.random() * avail.reduce((n, r) => n + RARITY[r].w, 0), pick = avail[0];
+    for(const r of avail){ x -= RARITY[r].w; if(x <= 0){ pick = r; break; } }
+    const opts = pool.filter(p => p.it.rarity === pick);
+    prize = opts[Math.floor(Math.random() * opts.length)];
+    S.owned = (S.owned || []).concat(prize.slot + ":" + prize.it.id);
+  } else addXp(50);
+  save();
+  BOX = {phase:"shake", prize};
+  if(typeof sfx === "function") sfx("whoosh");
+  render();
+  setTimeout(() => { BOX.phase = "open"; if(typeof sfx === "function") sfx(prize && (prize.it.rarity === "epic" || prize.it.rarity === "legendary") ? "win" : "coin"); render(); if(prize && prize.it.rarity !== "common" && typeof confetti === "function") confetti(); }, 1300);
 }
-function unlockedSet(){ const out = new Set(); WARDROBE.forEach(g => g.items.forEach(it => { if(unlocked(it.req)) out.add(g.slot+":"+it.id); })); return out; }
+let BOX = {phase:"idle", prize:null};
+function boxSvg(){
+  return '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M20 50 L60 34 L100 50 L100 96 L60 112 L20 96 Z" fill="#cdb6ff" stroke="#2a2150" stroke-width="3" stroke-linejoin="round"/><path d="M60 66 L60 112" stroke="#2a2150" stroke-width="3"/><path d="M20 50 L60 66 L100 50" fill="none" stroke="#2a2150" stroke-width="3" stroke-linejoin="round"/><path d="M14 44 L60 26 L106 44 L60 62 Z" fill="#ffe490" stroke="#2a2150" stroke-width="3" stroke-linejoin="round"/><path d="M60 26 L60 62" stroke="#ff8fd8" stroke-width="7"/><path d="M38 35 L84 53" stroke="#ff8fd8" stroke-width="7"/><path d="M60 26 Q46 8 40 20 Q44 30 60 26 Q74 8 80 20 Q76 30 60 26" fill="#ff8fd8" stroke="#2a2150" stroke-width="2.5"/><text x="60" y="94" text-anchor="middle" font-family="Lexend,sans-serif" font-size="26" font-weight="700" fill="#2a2150">?</text></svg>';
+}
+function vBox(){
+  const st = stageOf(S.xp);
+  if(BOX.phase === "shake") return '<section class="card box-card"><div class="box-art shaking">'+boxSvg()+'</div><h2>Opening…</h2></section>';
+  if(BOX.phase === "open"){
+    const p = BOX.prize;
+    if(!p) return '<section class="card box-card"><h2>You\'ve collected everything!</h2><p>No new looks left, so the box had <b>+50 XP</b> inside.</p><div class="row"><button class="btn" data-act="box-done">OK</button></div></section>';
+    return '<section class="card box-card rar-'+p.it.rarity+'" role="status"><span class="rar-tag">'+RARITY[p.it.rarity].name+'</span><div class="box-prize">'+atomi(st, "happy", {look:withItem(S.look, p.slot, p.it.id)})+'</div><h2>'+esc(p.it.name)+(p.slot === "theme" ? " theme" : "")+'!</h2>'+
+      '<div class="row" style="justify-content:center"><button class="btn btn-primary" data-act="box-wear">Wear it now</button>'+(S.boxes > 0 ? '<button class="btn" data-act="box-open">Open another ('+S.boxes+')</button>' : '')+'<button class="btn" data-act="box-done">Done</button></div></section>';
+  }
+  const pct = Math.round((S.boxXp || 0) / BOX_XP * 100);
+  return '<section class="card box-card idle"><div class="box-art'+(S.boxes > 0 ? ' wiggle' : ' dim')+'">'+boxSvg()+(S.boxes > 0 ? '<span class="box-count">'+S.boxes+'</span>' : '')+'</div><div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:200px"><h2>Blind boxes</h2>'+
+    '<p class="small muted">Every box holds a random look for Atomi that you don\'t have yet. Earn a new box every '+BOX_XP+' XP from lessons, quizzes and games.</p>'+
+    '<div class="small"><b>'+(S.boxXp || 0)+' / '+BOX_XP+' XP</b> to your next box</div>'+bar(pct)+
+    '<div>'+(S.boxes > 0 ? '<button class="btn btn-primary btn-big" data-act="box-open">Open a box ('+S.boxes+')</button>' : '<button class="btn" disabled>No boxes yet</button>')+'</div>'+
+    '<p class="small muted">Odds: Common 60% · Rare 28% · Epic 10% · Legendary 2%</p></div></section>';
+}
 function itemName(key){ const [slot, id] = key.split(":"); const g = WARDROBE.find(x => x.slot === slot); const it = g && g.items.find(x => x.id === id); return it ? it.name + (slot === "theme" ? " theme" : "") : key; }
 function withItem(look, slot, id){
   const l = Object.assign({}, cleanLook(look));
@@ -719,7 +786,7 @@ function wear(slot, id){
   const g = WARDROBE.find(x => x.slot === slot); if(!g) return;
   if(id === "none"){ if(slot === "theme") return; S.look = withItem(S.look, slot, null); DRESS.preview = null; DRESS.item = null; save(); pushBoard(); render(); return; }
   const it = g.items.find(x => x.id === id); if(!it) return;
-  if(unlocked(it.req)){
+  if(owns(slot, it)){
     S.look = withItem(S.look, slot, (S.look[slot] === id && slot !== "theme") ? null : id);
     DRESS.preview = null; DRESS.item = null; save(); pushBoard(); render();
   } else {
@@ -728,16 +795,16 @@ function wear(slot, id){
 }
 function vDress(){
   const st = stageOf(S.xp), look = DRESS.preview || S.look, g = WARDROBE.find(x => x.slot === DRESS.tab) || WARDROBE[0];
-  const owned = WARDROBE.reduce((n, gg) => n + gg.items.filter(it => unlocked(it.req)).length, 0), total = WARDROBE.reduce((n, gg) => n + gg.items.length, 0);
+  const owned = WARDROBE.reduce((n, gg) => n + gg.items.filter(it => owns(gg.slot, it)).length, 0), total = WARDROBE.reduce((n, gg) => n + gg.items.length, 0);
   let h = '<section class="card hero"><div style="width:210px">'+atomi(st, "happy", {look})+'</div><div style="display:flex;flex-direction:column;gap:12px;width:100%">'+
-    '<div><h1>Customise Atomi</h1><p class="muted">'+owned+' of '+total+' looks unlocked. Earn XP and badges to unlock more. Your friends see your Atomi on the leaderboard.</p></div>';
+    '<div><h1>Customise Atomi</h1><p class="muted">'+owned+' of '+total+' looks collected. Open blind boxes to collect more. Your friends see your Atomi on the leaderboard.</p></div>';
   if(DRESS.item){
-    h += '<p class="bubble">Trying on the '+esc(DRESS.item.it.name.toLowerCase())+'. '+esc(reqText(DRESS.item.it.req))+' to unlock it!</p>'+
+    h += '<p class="bubble">Trying on the '+esc(DRESS.item.it.name.toLowerCase())+'. '+esc(reqText(DRESS.item.it.req, DRESS.item.it))+' to own it!</p>'+
       '<div><button class="btn" data-act="dress-back">Back to my look</button></div>';
   } else {
     h += '<p class="bubble">'+(S.look.hat || S.look.band || S.look.scarf || S.look.cape || S.look.glasses || S.look.theme !== "classic" ? "Looking good! Tap anything to try it on." : "Tap a theme or an accessory to dress me up!")+'</p>';
   }
-  h += '</div></section>';
+  h += '</div></section>' + vBox();
   h += '<section class="card" style="display:flex;flex-direction:column;gap:14px"><div class="tabs" role="group" aria-label="Wardrobe">'+
     WARDROBE.map(x => '<button data-act="dress-tab" data-slot="'+x.slot+'" aria-pressed="'+(x.slot===g.slot)+'">'+x.label+'</button>').join("")+'</div>';
   if(g.slot === "hat" || g.slot === "band") h += '<p class="small muted">Atomi can wear one hat or one headband at a time.</p>';
@@ -747,13 +814,13 @@ function vDress(){
     h += '<button class="tile'+(on?' on':'')+'" data-act="wear" data-slot="'+g.slot+'" data-id="none"><span class="art">'+atomi(st, "ready", {look:withItem(S.look, g.slot, null)})+'</span>None'+(on?'<span class="wearing">✓ Wearing</span>':'')+'</button>';
   }
   g.items.forEach(it => {
-    const open = unlocked(it.req), on = S.look[g.slot] === it.id, trying = DRESS.item && DRESS.item.slot === g.slot && DRESS.item.it.id === it.id;
-    h += '<button class="tile'+(on?' on':'')+(open?'':' locked')+(trying?' trying':'')+'" data-act="wear" data-slot="'+g.slot+'" data-id="'+it.id+'" aria-label="'+esc(it.name)+(open?'':' (locked: '+esc(reqText(it.req))+')')+'">'+
-      '<span class="art">'+atomi(st, "ready", {look:withItem(S.look, g.slot, it.id)})+'</span>'+esc(it.name)+
-      (on ? '<span class="wearing">✓ Wearing</span>' : open ? '' : '<span class="req">Locked: '+esc(reqText(it.req))+'</span>')+'</button>';
+    const open = owns(g.slot, it), on = S.look[g.slot] === it.id, trying = DRESS.item && DRESS.item.slot === g.slot && DRESS.item.it.id === it.id;
+    h += '<button class="tile'+(on?' on':'')+(open?'':' locked')+(trying?' trying':'')+'" data-act="wear" data-slot="'+g.slot+'" data-id="'+it.id+'" aria-label="'+esc(it.name)+(open?'':' (not owned yet: '+esc(reqText(it.req, it))+')')+'">'+
+      '<span class="art">'+atomi(st, "ready", {look:withItem(S.look, g.slot, it.id)})+'</span>'+esc(it.name)+(it.rarity ? '<span class="rar rar-'+it.rarity+'">'+RARITY[it.rarity].name+'</span>' : '')+
+      (on ? '<span class="wearing">✓ Wearing</span>' : open ? '' : '<span class="req">In blind boxes</span>')+'</button>';
   });
   h += '</div></section>';
-  h += '<p class="small muted">Locked looks can still be tried on. Tap one to preview it.</p>';
+  h += '<p class="small muted">Looks you don\'t own yet can still be tried on. Tap one to preview it.</p>';
   return h;
 }
 
@@ -794,7 +861,7 @@ function topBar(){
   const cur = grp[view] || view;
   const tab = (id, label) => '<button data-act="go" data-v="'+id+'"'+(cur===id?' aria-current="page"':'')+'>'+label+'</button>';
   return '<header class="top"><button class="brand" data-act="go" data-v="home" aria-label="Atomi Science Quiz home"><span style="width:38px">'+me(Math.max(1,stageOf(S.xp)), "ready")+'</span><b>Atomi Science Quiz</b></button>'+
-    '<nav class="nav" aria-label="Main">'+tab("home","Home")+tab("explore","Learn")+tab("notes","Notes")+tab("games","Games")+tab("friends","Friends")+tab("dress","Atomi")+tab("me","Me")+'</nav></header>';
+    '<nav class="nav" aria-label="Main">'+tab("home","Home")+tab("explore","Learn")+tab("notes","Notes")+tab("games","Games")+tab("friends","Friends")+tab("dress","Atomi"+(S.boxes > 0 ? '<span class="nav-dot" aria-label="'+S.boxes+' unopened blind box'+(S.boxes>1?'es':'')+'">'+S.boxes+'</span>' : ''))+tab("me","Me")+'</nav></header>';
 }
 function bar(p){ return '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+p+'"><i style="width:'+p+'%"></i></div>'; }
 function xpLine(){
@@ -893,7 +960,7 @@ function vLesson(){
 }
 
 function vSubject(){
-  const s = viewArg, ts = TOPICS.filter(t => t.s === s && (yearFilter === "all" || String(t.y) === yearFilter));
+  const s = viewArg, ts = stageSort(TOPICS.filter(t => t.s === s && (yearFilter === "all" || String(t.y) === yearFilter)));
   const yb = (v,l) => '<button data-act="year" data-y="'+v+'" aria-pressed="'+(yearFilter===v)+'">'+l+'</button>';
   let h = '<section class="card s-'+s+'" style="border-top:5px solid var(--c);display:flex;flex-direction:column;gap:12px">'+
     '<div class="row between"><div><h1>'+SUBJ[s].name+'</h1><p class="muted">'+learnedCount(s)+' of '+TOPICS.filter(t=>t.s===s && isOn(t)).length+' topics learned · quiz mastery '+subjMastery(s)+'%</p></div>'+
@@ -901,7 +968,7 @@ function vSubject(){
     '<button class="btn" data-act="quiz" data-k="subject" data-arg="'+s+'">10-question quiz</button><button class="btn" data-act="src-play" data-s="'+s+'">Play a game</button></div></div>'+
     '<p class="small muted">Pick any topic you like. You don\'t have to go in order.</p>'+
     (s === "prac" ? '<p class="notice">Practical questions are about school lab work. Only do experiments in the lab, with your teacher.</p>' : '')+
-    '<div class="row between"><div class="seg" role="group" aria-label="Filter by year">'+yb("all","All")+yb("3","Year 3")+yb("4","Year 4")+'</div>'+
+    '<div class="row between"><div class="seg" role="group" aria-label="Filter by year">'+yb("all","All")+yb("1","Y1")+yb("2","Y2")+yb("3","Y3")+yb("4","Y4")+'</div>'+
     '<span class="small muted">Untick topics you don\'t want in mixed quizzes yet. You can still learn them.</span></div>'+
     '<div>';
   ts.forEach(t => {
@@ -963,8 +1030,8 @@ function vResult(){
       (!passed ? '<button class="btn btn-primary btn-big" data-act="learn" data-arg="'+t.id+'">Read the lesson again</button><button class="btn btn-big" data-act="again">Retry the check</button>' : '')+
       '</div>';
   }
-  if(Q.newLooks && Q.newLooks.length){
-    h += '<section class="card" style="display:flex;flex-direction:column;gap:10px"><h2>New for Atomi!</h2><p>You unlocked: <b>'+Q.newLooks.map(itemName).map(esc).join(", ")+'</b></p><div><button class="btn btn-primary" data-act="go" data-v="dress">Dress up Atomi</button></div></section>';
+  if(Q.newBoxes){
+    h += '<section class="card row" style="flex-wrap:nowrap;gap:14px"><div class="box-art wiggle" style="width:80px">'+boxSvg()+'</div><div style="display:flex;flex-direction:column;gap:8px"><h2>You earned '+(Q.newBoxes > 1 ? Q.newBoxes + ' blind boxes' : 'a blind box')+'!</h2><p class="small muted">What look will Atomi get?</p><div><button class="btn btn-primary" data-act="go" data-v="dress">Open it</button></div></div></section>';
   }
   if(Q.newBadges && Q.newBadges.length){
     h += '<section class="card"><h2>New badge'+(Q.newBadges.length>1?'s':'')+'</h2><div class="grid g2" style="margin-top:10px">'+
@@ -1027,9 +1094,8 @@ function vMe(){
     '<form id="nameform" class="row" style="align-items:flex-end"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px"><label for="nm" class="small" style="font-weight:800">Nickname (shown on the leaderboard)</label>'+
     '<input type="text" id="nm" maxlength="20" value="'+esc(S.name)+'"></div><button class="btn" type="submit">Save nickname</button></form>'+
     '<fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px"><legend style="font-weight:800;margin-bottom:4px">What are you studying this year?</legend>'+
-    '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="lvl" value="3" data-act="level"'+(S.level===3?' checked':'')+'> Year 3 science (Sec 3)</label>'+
-    '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="lvl" value="4" data-act="level"'+(S.level===4?' checked':'')+'> Year 4 science (Sec 4)</label>'+
-    '<span class="small muted">Year 4 students also get Year 3 topics in quizzes, for revision.</span></fieldset>'+
+    YEAR_OPTS.map(([v, l]) => '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="lvl" value="'+v+'" data-act="level"'+(S.level===v?' checked':'')+'> '+l+'</label>').join("")+
+    '<span class="small muted">Year 2 and Year 4 students also get the year before\'s topics in quizzes, for revision. You can still open any topic from any year.</span></fieldset>'+
     '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="checkbox" data-act="hide"'+(S.hideBoard?'':' checked')+'> Show me on the everyone leaderboard (friends can always see you)</label>'+
     '<p class="small muted">'+(mode === "cloud" ? "Your progress is saved to your Claude account, so it follows you to any device." : "Your progress is saved in this browser only. Open the app on claude.ai while signed in to save it to your account.")+'</p></section>';
   return h;
@@ -1037,14 +1103,13 @@ function vMe(){
 
 function vOnboard(){
   return '<section class="card hero"><div style="width:180px"><img src="atomi-hero.png" alt="Atomi, your study buddy, holding a star" style="width:100%;height:auto;display:block"></div><div style="display:flex;flex-direction:column;gap:14px;width:100%">'+
-    '<h1>Hi! I\'m Atomi.</h1><p>I\'ll teach you Year 3 and 4 science one topic at a time: short lessons, worked examples, then a quick check. Every lesson and quiz earns XP, and I evolve from a tiny Spark into a Supernova.</p>'+
+    '<h1>Hi! I\'m Atomi.</h1><p>I\'ll teach you secondary science, Year 1 to 4, one topic at a time: short lessons, worked examples, then a quick check. Every lesson and quiz earns XP, and I evolve from a tiny Spark into a Supernova.</p>'+
     '<form id="onboard" style="display:flex;flex-direction:column;gap:12px">'+
       '<div style="display:flex;flex-direction:column;gap:4px"><label for="nick" style="font-weight:800">Pick a nickname</label>'+
       '<input type="text" id="nick" maxlength="20" required placeholder="e.g. QuarkQueen" autocomplete="off">'+
       '<span class="small muted">Friends see this on the leaderboard. Use a nickname, not your full name.</span></div>'+
       '<fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px"><legend style="font-weight:800;margin-bottom:4px">What are you studying this year?</legend>'+
-      '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="yr" value="3" checked> Year 3 science (Sec 3)</label>'+
-      '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="yr" value="4"> Year 4 science (Sec 4)</label>'+
+      YEAR_OPTS.map(([v, l]) => '<label class="toggle" style="font-size:.95rem;color:var(--ink)"><input type="radio" name="yr" value="'+v+'"'+(v===3?' checked':'')+'> '+l+'</label>').join("")+
       '<span class="small muted">Atomi starts your lessons with this year\'s topics. You can change it any time on the Me tab.</span></fieldset>'+
       '<div><button class="btn btn-primary btn-big" type="submit">Meet Atomi</button></div>'+
     '</form></div></section>';
@@ -1089,6 +1154,9 @@ document.addEventListener("click", e => {
   else if(a === "wear") wear(b.dataset.slot, b.dataset.id);
   else if(a === "dress-tab"){ DRESS.tab = b.dataset.slot; render(); }
   else if(a === "dress-back"){ DRESS.preview = null; DRESS.item = null; render(); }
+  else if(a === "box-open") openBox();
+  else if(a === "box-done"){ BOX = {phase:"idle", prize:null}; render(); }
+  else if(a === "box-wear"){ const p = BOX.prize; BOX = {phase:"idle", prize:null}; if(p){ S.look = withItem(S.look, p.slot, p.it.id); DRESS.preview = null; DRESS.item = null; save(); pushBoard(); } render(); toast("Atomi is wearing it!"); }
   else if(a === "lnext") lessonMove(1);
   else if(a === "lback") lessonMove(-1);
   else if(a === "reveal"){ if(LS){ LS.shown++; render(); const r = document.querySelector('[data-act="reveal"]') || document.getElementById("lnext"); if(r) r.focus(); } }
@@ -1097,7 +1165,7 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   const el = e.target; const a = el.dataset && el.dataset.act; if(!a) return;
   if(a === "toggle"){ tstate(el.dataset.arg).off = !el.checked; save(); render(); }
-  else if(a === "level"){ S.level = Number(el.value) === 4 ? 4 : 3; TOPICS.forEach(t => { if(S.topics[t.id]) delete S.topics[t.id].off; }); save(); render(); toast("Now studying Year "+S.level+" science"); }
+  else if(a === "level"){ S.level = [1,2,3,4].includes(Number(el.value)) ? Number(el.value) : 3; TOPICS.forEach(t => { if(S.topics[t.id]) delete S.topics[t.id].off; }); save(); render(); toast("Now studying Year "+S.level+" science"); }
   else if(a === "hide"){ S.hideBoard = !el.checked; save(); pushBoard(); }
 });
 document.addEventListener("submit", e => {
@@ -1105,7 +1173,7 @@ document.addEventListener("submit", e => {
   if(e.target.id === "onboard"){
     const nm = document.getElementById("nick").value.trim().slice(0,20);
     if(!nm){ document.getElementById("nick").focus(); return; }
-    S.name = nm; S.level = (new FormData(e.target).get("yr") === "4") ? 4 : 3;
+    S.name = nm; S.level = [1,2,3,4].includes(Number(new FormData(e.target).get("yr"))) ? Number(new FormData(e.target).get("yr")) : 3;
     save(); pushBoard(); go("home");
   } else if(e.target.id === "nameform"){
     const nm = document.getElementById("nm").value.trim().slice(0,20);
@@ -1129,7 +1197,10 @@ function adopt(data){
   if(data && typeof data === "object") Object.keys(base).forEach(k => { if(data[k] !== undefined) base[k] = data[k]; });
   if(data && data.perfects) base.perfects = data.perfects;
   if(data && data.level === undefined && data.y4) base.level = 4; // older saves
-  if(base.level !== 4) base.level = 3;
+  if(![1,2,3,4].includes(base.level)) base.level = 3;
+  if(data && typeof data === "object" && !Array.isArray(data.owned) && (data.xp || 0) > 0){ base.owned = legacyOwned(base); base.boxes = 1; }
+  if(!Array.isArray(base.owned)) base.owned = [];
+  base.boxes = Math.max(0, Math.min(999, Number(base.boxes) || 0)); base.boxXp = Math.max(0, Math.min(BOX_XP - 1, Number(base.boxXp) || 0));
   base.look = cleanLook(base.look);
   return base;
 }

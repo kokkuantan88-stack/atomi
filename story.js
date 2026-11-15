@@ -32,9 +32,11 @@ let SQ = null, SQ_TICK = null;
 function storyDone(){ return (S.story && S.story.done) || {}; }
 function storyUnlocked(i){ return i === 0 || !!storyDone()[STORY[i-1].id]; }
 function storyPool(ch){
-  let ts = ch.s === "all" ? TOPICS.filter(t => t.y <= Math.max(S.level, 3)) : TOPICS.filter(t => t.s === ch.s && t.y <= Math.max(S.level, 3));
-  if(ch.id === "volt"){ const e = ts.filter(t => /elec|circ|current|charge|magnet|resist|volt/i.test(t.id + " " + t.name)); if(e.length >= 2) ts = e; }
-  if(ch.id === "grav"){ const f = ts.filter(t => /force|motion|energy|pressure|moment|mass|weight|speed|kinem|dynam|work|power|gravit/i.test(t.id + " " + t.name)); if(f.length >= 2) ts = f; }
+  const mine = t => S.level <= 2 ? t.y <= 2 : (t.y >= 3 && t.y <= S.level);
+  let ts = TOPICS.filter(t => (ch.s === "all" || t.s === ch.s) && mine(t));
+  if(ch.id === "lab" && ts.length < 2) ts = ts.concat(TOPICS.filter(t => mine(t) && /separation|physical/.test(t.id)));
+  if(ch.id === "volt"){ const e = ts.filter(t => /elec|circ|current|charge|magnet|resist|volt|light/i.test(t.id + " " + t.name)); if(e.length >= 2) ts = e; }
+  if(ch.id === "grav"){ const f = ts.filter(t => /force|motion|energy|pressure|moment|mass|weight|speed|kinem|dynam|work|power|gravit|heat/i.test(t.id + " " + t.name)); if(f.length >= 2) ts = f; }
   return shuffle(poolFor(ts.length ? ts : TOPICS));
 }
 function storyStart(i){

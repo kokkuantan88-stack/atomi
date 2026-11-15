@@ -17,19 +17,19 @@ function getQ(qid){
   return QMAP[qid] || null;
 }
 function awardGame(xp, extra){
-  const before = unlockedSet();
+  const boxesBefore = S.boxes || 0;
   addXp(xp); markStudied();
   S.games = (S.games || 0) + 1;
   if(extra) extra();
   const badges = checkBadges();
-  const looks = [...unlockedSet()].filter(x => !before.has(x));
+  const boxes = Math.max(0, (S.boxes || 0) - boxesBefore);
   save(); pushBoard();
-  return {badges, looks};
+  return {badges, boxes, looks:[]};
 }
 function rewardHtml(r){
   let h = '';
   if(r.badges.length) h += '<p class="bubble">New badge: '+r.badges.map(id => esc((BADGES.find(b => b.id === id) || {}).name || id)).join(", ")+'!</p>';
-  if(r.looks.length) h += '<p class="bubble">New for Atomi: '+r.looks.map(itemName).map(esc).join(", ")+'! <button class="btn btn-sm" data-act="go" data-v="dress">Dress up</button></p>';
+  if(r.boxes) h += '<p class="bubble">You earned '+(r.boxes > 1 ? r.boxes + ' blind boxes' : 'a blind box')+' for Atomi! <button class="btn btn-sm btn-primary" data-act="go" data-v="dress">Open it</button></p>';
   return h;
 }
 function subjChips(cur, act, withAll, extra){
@@ -42,7 +42,7 @@ function subjChips(cur, act, withAll, extra){
 let EXP = {s:"all", y:"all", q:""};
 function exploreList(){
   const q = EXP.q.trim().toLowerCase();
-  const ts = TOPICS.filter(t => (EXP.s === "all" || t.s === EXP.s) && (EXP.y === "all" || String(t.y) === EXP.y) && (!q || t.name.toLowerCase().includes(q)));
+  const ts = stageSort(TOPICS).filter(t => (EXP.s === "all" || t.s === EXP.s) && (EXP.y === "all" || String(t.y) === EXP.y) && (!q || t.name.toLowerCase().includes(q)));
   if(!ts.length) return '<p class="muted">No topics match "'+esc(EXP.q)+'". Try another word.</p>';
   return ts.map(t => '<div class="trow s-'+t.s+'"><div style="display:flex;flex-direction:column;gap:4px"><b>'+esc(t.name)+'</b><div class="row" style="gap:8px"><span class="tag">'+SUBJ[t.s].name+'</span><span class="tag" style="--cs:var(--panel);--c:var(--muted)">Year '+t.y+'</span>'+statusChip(t.id)+'</div></div>'+
     '<div class="barcell">'+(tried(t.id) ? '<div class="small muted" style="text-align:right">Quiz '+mastery(t.id)+'%</div>'+bar(mastery(t.id)) : '<span class="small muted">No quiz yet</span>')+'</div>'+
@@ -53,7 +53,7 @@ function vExplore(){
   return '<section class="card" style="display:flex;flex-direction:column;gap:14px"><div><h1>Choose a topic</h1><p class="muted">Learn any topic you like, in any order. Pick what your class is doing, or what you want to get better at.</p></div>'+
     '<div><label for="exp-q" class="sr">Search topics</label><input type="text" id="exp-q" placeholder="Search, e.g. enzymes, moles, pressure" value="'+esc(EXP.q)+'" style="max-width:100%" autocomplete="off"></div>'+
     subjChips(EXP.s, "exp-s", true)+
-    '<div class="seg" role="group" aria-label="Filter by year" style="align-self:flex-start">'+yb("all","All years")+yb("3","Year 3")+yb("4","Year 4")+'</div>'+
+    '<div class="seg" role="group" aria-label="Filter by year" style="align-self:flex-start">'+yb("all","All years")+yb("1","Year 1")+yb("2","Year 2")+yb("3","Year 3")+yb("4","Year 4")+'</div>'+
     '<div id="exp-list">'+exploreList()+'</div></section>';
 }
 
@@ -135,7 +135,7 @@ async function makeDeck(text){
   if((S.decks || []).length >= 20){ NOTES.msg = "You have 20 decks, the most you can keep. Delete one to make another."; render(); return; }
   NOTES.busy = true; NOTES.msg = "Atomi is reading your notes. This can take up to a minute."; render();
   NOTES.ctl = new AbortController();
-  const prompt = "You are making study material for a Year 3 or Year 4 (Secondary 3-4) science student in a Singapore Integrated Programme school, from the student's own notes. "+
+  const prompt = "You are making study material for a Year "+S.level+" (Secondary "+S.level+") science student in a Singapore Integrated Programme school, from the student's own notes. "+
     "Use ONLY the notes below"+(NOTES.images.length ? " and the attached photos of the student's notes" : "")+". "+
     'Reply with only a JSON object of this shape: {"title": string (at most 40 characters, names the topic), "subject": one of "physics", "chemistry", "biology", "practical", "other", '+
     '"flashcards": [{"front": string (a term or short question, at most 80 characters), "back": string (the answer, at most 160 characters)}] (10 to 15 cards), '+
@@ -156,10 +156,10 @@ async function makeDeck(text){
       else {
         const d = {id:uid6(), title:str(r.title, 40) || "My notes", subject:["physics","chemistry","biology","practical"].includes(r.subject) ? r.subject : "other", made:today(), cards, qs};
         S.decks = [d].concat(S.decks || []);
-        const before = unlockedSet(); addXp(20); const nb = checkBadges(); const looks = [...unlockedSet()].filter(x => !before.has(x));
+        const bb = S.boxes || 0; addXp(20); const nb = checkBadges(); const looks = (S.boxes || 0) > bb;
         save(); pushBoard();
         NOTES.images = [];
-        NOTES.msg = "Made \"" + d.title + "\": " + cards.length + " flashcards and " + qs.length + " questions. +20 XP" + (nb.length ? ". New badge!" : "") + (looks.length ? ". New look for Atomi!" : "");
+        NOTES.msg = "Made \"" + d.title + "\": " + cards.length + " flashcards and " + qs.length + " questions. +20 XP" + (nb.length ? ". New badge!" : "") + (looks ? ". You earned a blind box!" : "");
         const box = document.getElementById("notes-text"); if(box) box.value = "";
       }
     }
@@ -418,7 +418,7 @@ function battleStart(){
     return;
   }
   if(ARC_MODES[BT.mode]){ BT.startAt = Date.now(); BT.room.emit("battle", battleStartMsg()).catch(e => toast(e && e.code === "not_permitted" ? "You need Contributor access to start battles." : "Couldn't start. Try again.")); return; }
-  const ts = BT.s === "all" ? TOPICS.filter(t => t.y <= S.level) : TOPICS.filter(t => t.s === BT.s && t.y <= S.level);
+  const ts = BT.s === "all" ? TOPICS.filter(isOn) : TOPICS.filter(t => t.s === BT.s && isOn(t));
   const qids = shuffle(poolFor(ts.length ? ts : TOPICS)).slice(0, BATTLE_N);
   BT.room.emit("battle", {type:"start", qids, s:BT.s}).catch(e => toast(e && e.code === "not_permitted" ? "You need Contributor access to start battles." : "Couldn't start. Try again."));
 }
@@ -457,7 +457,7 @@ function battleCheckWin(){
   if(ps[0].me && ps[0].score > (ps[1] ? ps[1].score : -1)){
     BT.won = true;
     const r = awardGame(30, () => { S.wins = (S.wins || 0) + 1; });
-    BT.result = {badges:BT.result.badges.concat(r.badges), looks:BT.result.looks.concat(r.looks)};
+    BT.result = {badges:BT.result.badges.concat(r.badges), boxes:(BT.result.boxes || 0) + r.boxes, looks:[]};
     BT.xp += 30;
   }
 }

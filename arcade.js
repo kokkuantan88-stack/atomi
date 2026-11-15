@@ -89,7 +89,7 @@ function srcPicker(){
     if(!decks.length) h += '<p class="small muted">You have no notes decks yet. Paste or snap your notes and Atomi turns them into questions you can play with.</p><div><button class="btn btn-sm btn-primary" data-act="go" data-v="notes">Make a deck from my notes</button></div>';
     else h += '<p class="small muted">Pick one of your decks:</p><div class="tabs src-topics">'+decks.map(d => '<button data-act="src-d" data-id="'+d.id+'" aria-pressed="'+(src.deck===d.id)+'">'+esc(d.title)+' <span class="muted">('+d.qs.length+')</span></button>').join("")+'</div>';
   } else if(src.s !== "all"){
-    const ts = TOPICS.filter(t => t.s === src.s);
+    const ts = stageSort(TOPICS.filter(t => t.s === src.s));
     h += '<p class="small muted">Tap topics to focus on them, or leave them all off to use every '+esc(subjName(src.s))+' topic.</p><div class="tabs src-topics">'+
       ts.map(t => '<button data-act="src-t" data-t="'+t.id+'" aria-pressed="'+src.topics.includes(t.id)+'">'+esc(t.name)+' <span class="muted">Y'+t.y+'</span></button>').join("")+'</div>'+
       (src.topics.length ? '<div><button class="btn btn-sm" data-act="src-clear">Clear topics</button></div>' : '');
