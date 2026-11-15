@@ -125,7 +125,7 @@ tr.me td{background:var(--accent-soft);font-weight:800}
 .badge.locked .medal{background:var(--line);color:var(--muted)}
 .stagestrip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;text-align:center}
 .stagestrip .locked{opacity:.35}
-input[type=text]{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;width:100%;max-width:320px}
+input[type=text],input[type=email],input[type=password]{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;width:100%;max-width:320px}
 .notice{border-left:4px solid var(--prac);background:var(--prac-soft);border-radius:10px;padding:10px 12px;font-size:.9rem}
 .atomi{display:block;width:100%;height:auto;overflow:visible}
 .mood-happy .bod{animation:bounce 2.4s ease-in-out infinite;transform-origin:60px 90px}
@@ -1194,6 +1194,7 @@ function vMe(){
   h += '</div>'+xpLine()+'</section>';
   h += '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Badges ('+S.badges.length+' of '+BADGES.length+')</h2><div class="grid g2">'+
     BADGES.map(b => badgeHtml(b, S.badges.includes(b.id))).join("")+'</div></section>';
+  if(window.ATOMI_ACCOUNT) h += '<section class="card row between"><div><h2>Your account</h2><p class="small muted">Logged in as <b>'+esc(window.ATOMI_ACCOUNT.email)+'</b>. Log in with this email on any device to keep your progress.</p></div><button class="btn" data-act="logout">Log out</button></section>';
   h += '<section class="card" style="display:flex;flex-direction:column;gap:14px"><h2>Settings</h2>'+
     '<form id="nameform" class="row" style="align-items:flex-end"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px"><label for="nm" class="small" style="font-weight:800">Nickname (shown on the leaderboard)</label>'+
     '<input type="text" id="nm" maxlength="20" value="'+esc(S.name)+'"></div><button class="btn" type="submit">Save nickname</button></form>'+
@@ -1259,6 +1260,7 @@ document.addEventListener("click", e => {
   else if(a === "dress-tab"){ DRESS.tab = b.dataset.slot; render(); }
   else if(a === "dress-back"){ DRESS.preview = null; DRESS.item = null; render(); }
   else if(a === "box-open") openBox();
+  else if(a === "logout"){ if(window.ATOMI_ACCOUNT) window.ATOMI_ACCOUNT.signOut(); }
   else if(a === "box-done"){ BOX = {phase:"idle", prize:null}; render(); }
   else if(a === "box-wear"){ const p = BOX.prize; BOX = {phase:"idle", prize:null}; if(p){ S.look = withItem(S.look, p.slot, p.it.id); DRESS.preview = null; DRESS.item = null; save(); pushBoard(); } render(); toast("Atomi is wearing it!"); }
   else if(a === "lnext") lessonMove(1);
@@ -1310,6 +1312,8 @@ function adopt(data){
 }
 async function boot(){
   render();
+  // Website version: wait for the student to log in (supabase.js) before loading their progress.
+  if(window.ATOMI_AUTH){ try{ await window.ATOMI_AUTH; }catch(e){} }
   let user = null;
   if(window.claude && typeof window.claude.use === "function"){
     try{ [DB, user] = await Promise.all([withTimeout(window.claude.use("db"), 10000), withTimeout(window.claude.use("user"), 10000)]); }catch(e){ DB = null; }
@@ -1323,7 +1327,7 @@ async function boot(){
     if(UID){
       try{
         const snap = await withTimeout(DB.doc("data/users/"+UID+"/state").get(), 10000);
-        if(snap){ mode = "cloud"; if(snap.exists) S = adopt(snap.data()); }
+        if(snap){ mode = "cloud"; if(snap.exists) S = adopt(snap.data()); else { try{ const g = JSON.parse(localStorage.getItem("atomi-quiz-local") || "null"); if(g && g.name) S = adopt(g); }catch(e){} } }
       }catch(e){ mode = "local"; }
     }
   }

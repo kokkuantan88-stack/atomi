@@ -45,7 +45,7 @@ Lessons and questions were written to follow published Year 3 and 4 IP outlines 
 ## Supabase (for the website version)
 
 Outside claude.ai, Atomi saves to the Supabase project `atomi` (`rjazdwtatjrumblqmopg`) through `supabase.js`:
-students get an account automatically (anonymous sign-in), and their progress, the leaderboard, friend codes
+students log in with email and password (or play without an account on one device), and their progress, the leaderboard, friend codes
 and live battles (Supabase Realtime) all work. The database setup is in `supabase/schema.sql`; Row Level
 Security means each student can only change their own data. On claude.ai the app keeps using Claude's
 built-in storage and `supabase.js` does nothing.
