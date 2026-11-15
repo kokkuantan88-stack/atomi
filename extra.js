@@ -91,7 +91,7 @@ function vNotes(){
   const decks = S.decks || [];
   let h = '<section class="card" style="display:flex;flex-direction:column;gap:14px"><div><h1>My notes</h1><p class="muted">Paste your class notes or upload photos of them. Atomi turns them into flashcards and a quiz you can practise any time.</p></div>';
   if(!SAMPLE){
-    h += '<p class="notice">Making quizzes from notes uses Claude, so it only works when the app is opened on claude.ai while signed in.</p>';
+    h += '<p class="notice">Making quizzes from notes needs an internet connection and a signed-in account. Check your connection and reload the page.</p>';
   } else {
     h += '<form id="notesform" style="display:flex;flex-direction:column;gap:10px">'+
       '<label for="notes-text" style="font-weight:800">Your notes</label>'+
@@ -101,7 +101,7 @@ function vNotes(){
       '<span class="small muted" id="notes-files">'+(NOTES.images.length ? NOTES.images.length+' photo'+(NOTES.images.length>1?'s':'')+' added' : (SAMPLE_IMAGES ? 'Text files (.txt, .md) or up to '+SAMPLE_IMAGES.maxCount+' photos of your notes' : 'Text files (.txt, .md)'))+'</span></div>'+
       '<div class="row"><button class="btn btn-primary btn-big" type="submit"'+(NOTES.busy?' disabled':'')+'>'+(NOTES.busy?'Making your cards…':'Make flashcards and quiz')+'</button>'+(NOTES.busy?'<button class="btn" type="button" data-act="notes-stop">Stop</button>':'')+'</div>'+
       (NOTES.msg ? '<p class="small" role="status" style="font-weight:700">'+esc(NOTES.msg)+'</p>' : '')+
-      '<p class="small muted">Uses your own Claude account. The first time, Claude asks you to allow it.</p></form>';
+      '<p class="small muted">'+esc(SAMPLE.note || "Uses your own Claude account. The first time, Claude asks you to allow it.")+'</p></form>';
   }
   h += '</section>';
   h += '<section class="card" style="display:flex;flex-direction:column;gap:6px"><h2>Your decks ('+decks.length+')</h2>';
@@ -143,7 +143,9 @@ async function makeDeck(text){
     "Every question is multiple choice with exactly one correct answer and three plausible wrong answers. Everything must be scientifically accurate and use SI units. "+
     'If the notes are not school study material, reply {"error": "a short reason"} instead.\n\nNOTES:\n' + (text.trim() ? text.slice(0, 30000) : "(see the attached photos)");
   try{
-    const r = await SAMPLE.json(prompt, {signal:NOTES.ctl.signal, images:NOTES.images.length ? NOTES.images : undefined, cache:false});
+    const r = SAMPLE.makeDeck
+      ? await SAMPLE.makeDeck({notes:text, images:NOTES.images, level:S.level, signal:NOTES.ctl.signal})
+      : await SAMPLE.json(prompt, {signal:NOTES.ctl.signal, images:NOTES.images.length ? NOTES.images : undefined, cache:false});
     if(!r || typeof r !== "object" || r.error){ NOTES.msg = r && r.error ? "Atomi couldn't make cards: " + String(r.error).slice(0,160) : "Atomi couldn't read that. Try clearer notes."; }
     else {
       const str = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
@@ -167,7 +169,11 @@ async function makeDeck(text){
     const code = e && e.code;
     NOTES.msg = code === "cancelled" ? "Stopped." : code === "not_granted" || code === "sampling_disabled" ? "Claude isn't allowed for this app, so notes can't be turned into cards." :
       code === "rate_limited" ? "Atomi needs a short break. Try again in a little while." : code === "image_rejected" ? "One of the photos couldn't be read. Try a different photo." :
-      code === "prompt_too_large" ? "Those notes are too long. Try one topic at a time." : "Something went wrong. Try again.";
+      code === "prompt_too_large" ? "Those notes are too long. Try one topic at a time." :
+      code === "daily_limit" ? "You've made 5 decks today, the most for one day. Come back tomorrow for more!" :
+      code === "app_daily_limit" ? "Atomi has made lots of decks today and needs a rest. Try again tomorrow." :
+      code === "not_configured" ? "Making decks from notes isn't switched on for this site yet." :
+      code === "network" ? "Couldn't reach Atomi. Check your internet and try again." : "Something went wrong. Try again.";
   }
   NOTES.busy = false; NOTES.ctl = null; render();
 }

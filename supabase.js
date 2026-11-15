@@ -141,7 +141,42 @@ const SUPABASE_KEY = "sb_publishable_6XwN6XUeJTdUwUM-oNxCPQ_9-w66WLN";
   const lobby = makeRoom("lobby");
   lobby.join = async name => { if(!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) throw Object.assign(new Error("bad name"), {code:"invalid_argument"}); const r = rooms[name] || (rooms[name] = makeRoom(name)); await r.presence({}); return r; };
 
-  const caps = {db, user, room:lobby};
+  /* ---------- sample: notes → flashcards, through the make-deck server function ---------- */
+  // Photos are shrunk to at most 1568 px and sent as JPEG, which keeps them small and fast.
+  function photoData(file){
+    return new Promise((resolve, reject) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        const sc = Math.min(1, 1568 / Math.max(img.width, img.height));
+        const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        resolve({type:"image/jpeg", data:c.toDataURL("image/jpeg", 0.85).split(",")[1]});
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(Object.assign(new Error("bad image"), {code:"image_rejected"})); };
+      img.src = url;
+    });
+  }
+  const sample = {
+    note:"Uses Atomi's AI. You can make 5 decks a day.",
+    async limits(){ return {images:{maxCount:4, mediaTypes:["image/jpeg","image/png","image/webp","image/gif"]}}; },
+    async makeDeck({notes, images, level, signal}){
+      const {sb} = await client();
+      const {data:{session}} = await sb.auth.getSession();
+      const pics = [];
+      for(const f of (images || []).slice(0, 4)) pics.push(await photoData(f));
+      let res;
+      try{
+        res = await fetch(SUPABASE_URL + "/functions/v1/make-deck", {method:"POST", signal,
+          headers:{"Content-Type":"application/json", apikey:SUPABASE_KEY, Authorization:"Bearer " + (session ? session.access_token : SUPABASE_KEY)},
+          body:JSON.stringify({notes:String(notes || "").slice(0, 30000), images:pics, level})});
+      }catch(e){ throw Object.assign(new Error("network"), {code:e && e.name === "AbortError" ? "cancelled" : "network"}); }
+      const out = await res.json().catch(() => null);
+      if(!res.ok || !out) throw Object.assign(new Error("make-deck failed"), {code:(out && out.error_code) || "ai_failed"});
+      return out;
+    }
+  };
+
+  const caps = {db, user, room:lobby, sample};
   window.claude = {use(name){
     if(!caps[name]) return Promise.resolve(null);
     return client().then(() => caps[name], () => null);

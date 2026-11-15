@@ -51,3 +51,44 @@ create index if not exists players_friend_code on public.players ((data->>'frien
 do $$ begin
   alter publication supabase_realtime add table public.players;
 exception when duplicate_object then null; end $$;
+
+-- ---------- AI decks from notes (make-deck server function) ----------
+-- How many AI decks each student made each day (to keep the AI bill small).
+create table if not exists public.deck_usage (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  day date not null default (now() at time zone 'Asia/Singapore')::date,
+  count int not null default 0,
+  primary key (user_id, day)
+);
+alter table public.deck_usage enable row level security;
+drop policy if exists "deck usage: read own" on public.deck_usage;
+create policy "deck usage: read own" on public.deck_usage for select to authenticated using ((select auth.uid()) = user_id);
+
+-- Only the make-deck server function (service role) may call these; students cannot.
+create or replace function public.use_deck_credit(uid uuid, per_user int default 5, per_app int default 150)
+returns int language plpgsql security definer set search_path = '' as $$
+declare today date := (now() at time zone 'Asia/Singapore')::date; mine int; total int;
+begin
+  if uid is null then raise exception 'not_signed_in'; end if;
+  select coalesce(sum(count), 0) into total from public.deck_usage where day = today;
+  if total >= per_app then raise exception 'app_daily_limit'; end if;
+  insert into public.deck_usage (user_id, day, count) values (uid, today, 1)
+    on conflict (user_id, day) do update set count = public.deck_usage.count + 1 returning count into mine;
+  if mine > per_user then
+    update public.deck_usage set count = count - 1 where user_id = uid and day = today;
+    raise exception 'daily_limit';
+  end if;
+  return per_user - mine;
+end; $$;
+
+create or replace function public.refund_deck_credit(uid uuid)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  update public.deck_usage set count = greatest(count - 1, 0)
+  where user_id = uid and day = (now() at time zone 'Asia/Singapore')::date;
+end; $$;
+
+revoke all on function public.use_deck_credit(uuid, int, int) from public, anon, authenticated;
+revoke all on function public.refund_deck_credit(uuid) from public, anon, authenticated;
+grant execute on function public.use_deck_credit(uuid, int, int) to service_role;
+grant execute on function public.refund_deck_credit(uuid) to service_role;
