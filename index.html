@@ -9,28 +9,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* Atomi brand kit, Cosmic lab: deep space navy, glowing purple, star yellow. Cosmic is the default theme; Daylight via data-theme="light".
+  /* Atomi brand kit, Pastel cosmic: dusky lavender night sky, pastel purple, butter-star yellow, candy subject colours.
+     Cosmic is the default theme; Daylight via data-theme="light".
      Layout: one centred column (max 880px): top bar, then the current view. Subject colours carry meaning everywhere. */
-  --bg:#120e2e; --surface:#1b1640; --panel:#241d52; --ink:#f3eeff; --muted:#b9b0dd; --line:#3a3175;
-  --accent:#b48cff; --accent-soft:#2e2463; --accent-ink:#120e2e;
-  --star:#ffd84d; --on-star:#120e2e; --star-deep:#ffb700;
-  --phy:#6cd2ff; --chem:#ff978c; --bio:#9be86a; --prac:#ffd84d;
-  --phy-soft:#102c45; --chem-soft:#3a1c22; --bio-soft:#17331f; --prac-soft:#362c10;
-  --good:#6fe0a0; --good-soft:#133a2a; --bad:#ff8a9c; --bad-soft:#3d1a2a;
-  --glow:0 0 0 2px #3a3175, 0 0 24px rgba(180,140,255,.35);
+  --bg:#231d47; --surface:#2d2659; --panel:#383069; --ink:#f8f4ff; --muted:#cbc2ea; --line:#4a4084;
+  --accent:#cdb6ff; --accent-soft:#3f3478; --accent-ink:#231d47;
+  --star:#ffe490; --on-star:#231d47; --star-deep:#ffcf4d;
+  --phy:#9fdcff; --chem:#ffb4ab; --bio:#bdf0a0; --prac:#ffe490;
+  --phy-soft:#24395e; --chem-soft:#43284a; --bio-soft:#26404a; --prac-soft:#41385a;
+  --good:#a6efc4; --good-soft:#22404a; --bad:#ffb3c1; --bad-soft:#45274d;
+  --glow:0 0 0 2px #4a4084, 0 0 28px rgba(205,182,255,.4);
   --font-display:"Lexend","Trebuchet MS",system-ui,sans-serif;
   --font-body:"Nunito","Segoe UI",system-ui,sans-serif;
   --radius:20px;
   color-scheme:dark;
 }
 :root[data-theme="light"]{
-  --bg:#f5f2ff; --surface:#ffffff; --panel:#ebe5ff; --ink:#1b1640; --muted:#554c80; --line:#d6ccf5;
-  --accent:#6b35d6; --accent-soft:#e6dcff; --accent-ink:#ffffff;
-  --star:#fed442; --on-star:#1b1640; --star-deep:#f4ab00;
-  --phy:#0a6aa1; --chem:#c0331c; --bio:#3c7409; --prac:#835a00;
-  --phy-soft:#dff3ff; --chem-soft:#ffe6e3; --bio-soft:#ebf9d6; --prac-soft:#fff3cc;
-  --good:#1f6e30; --good-soft:#dff4e4; --bad:#b8243e; --bad-soft:#fde3e7;
-  --glow:0 0 0 2px #ffffff, 0 6px 16px rgba(107,53,214,.22);
+  --bg:#f8f4ff; --surface:#ffffff; --panel:#efe8ff; --ink:#2a2350; --muted:#5c537f; --line:#ddd2fb;
+  --accent:#7445d6; --accent-soft:#ece3ff; --accent-ink:#ffffff;
+  --star:#ffe07a; --on-star:#2a2350; --star-deep:#f2b632;
+  --phy:#0b6a9e; --chem:#b8402c; --bio:#3b7313; --prac:#7d5a00;
+  --phy-soft:#e3f4ff; --chem-soft:#ffece8; --bio-soft:#eefbe2; --prac-soft:#fff6d6;
+  --good:#1f6e3a; --good-soft:#e3f6ea; --bad:#b02a4a; --bad-soft:#ffe8ee;
+  --glow:0 0 0 2px #ffffff, 0 6px 18px rgba(116,69,214,.2);
   color-scheme:light;
 }
 *{box-sizing:border-box}
@@ -166,7 +167,7 @@ ul.pts,ol.pts{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap
 .tabs button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font-weight:800;font-size:.88rem}
 .tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 /* Brand kit: Cosmic lab night sky (Daylight theme drops it) */
-body{background-image:radial-gradient(1.5px 1.5px at 12% 18%,rgba(255,255,255,.45),transparent 60%),radial-gradient(1px 1px at 68% 12%,rgba(255,255,255,.4),transparent 60%),radial-gradient(1.5px 1.5px at 85% 46%,rgba(255,216,77,.5),transparent 60%),radial-gradient(1px 1px at 32% 72%,rgba(255,255,255,.35),transparent 60%),radial-gradient(1px 1px at 52% 38%,rgba(180,140,255,.5),transparent 60%),radial-gradient(1.5px 1.5px at 92% 88%,rgba(255,255,255,.35),transparent 60%);background-attachment:fixed}
+body{background-image:radial-gradient(2px 2px at 12% 18%,rgba(255,255,255,.5),transparent 60%),radial-gradient(1.5px 1.5px at 68% 12%,rgba(255,179,225,.6),transparent 60%),radial-gradient(2px 2px at 85% 46%,rgba(255,228,144,.6),transparent 60%),radial-gradient(1.5px 1.5px at 32% 72%,rgba(159,216,255,.55),transparent 60%),radial-gradient(1.5px 1.5px at 52% 38%,rgba(205,182,255,.6),transparent 60%),radial-gradient(2px 2px at 92% 88%,rgba(168,240,208,.5),transparent 60%),radial-gradient(1px 1px at 22% 52%,rgba(255,255,255,.45),transparent 60%),radial-gradient(1.5px 1.5px at 78% 70%,rgba(255,173,158,.5),transparent 60%);background-attachment:fixed}
 :root[data-theme="light"] body{background-image:none}
 .brand b{color:var(--accent)}
 .bubble::before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:var(--panel);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateY(-50%) rotate(45deg)}
@@ -406,13 +407,13 @@ function atomi(stage, md, opt){
   const wearsHat = !!look.hat;
   let s = '<svg class="atomi mood-'+md+'" viewBox="0 0 120 120" role="img" aria-label="Atomi, '+STAGES[stage].name+' stage, feeling '+moodWord+'"><defs><clipPath id="'+uid+'"><ellipse cx="'+cx+'" cy="'+cy+'" rx="'+r+'" ry="'+(r*0.94)+'"/></clipPath></defs><g class="bod"'+(md === "dim" ? ' opacity="0.75"' : '')+'>';
   // glow (Supernova) and cape
-  if(stage >= 4) s += '<circle cx="60" cy="66" r="56" fill="#b48cff" opacity="0.18"/>';
+  if(stage >= 4) s += '<circle cx="60" cy="66" r="56" fill="#cdb6ff" opacity="0.2"/>';
   const capeColour = look.cape ? CAPES[look.cape] : (stage >= 4 ? CAPES.purple : null);
   if(capeColour && stage >= 1){
     s += '<path d="M'+(cx-24*k)+' '+(cy-4*k)+' Q'+(cx-44*k)+' '+(cy+40*k)+' '+(cx-34*k)+' '+(cy+48*k)+' L'+(cx+34*k)+' '+(cy+48*k)+' Q'+(cx+44*k)+' '+(cy+40*k)+' '+(cx+24*k)+' '+(cy-4*k)+' Z" fill="'+capeColour+'" stroke="'+INK+'" stroke-width="2"/>';
     if(look.cape === "star" || (!look.cape && stage >= 4)) s += star(cx-26*k, cy+36*k, 4, STAR) + star(cx+27*k, cy+30*k, 3.5, STAR) + star(cx+18*k, cy+42*k, 2.5, STAR);
   }
-  if(stage === 0) s += '<circle cx="'+cx+'" cy="'+cy+'" r="30" fill="#b48cff" opacity="0.22"/>';
+  if(stage === 0) s += '<circle cx="'+cx+'" cy="'+cy+'" r="30" fill="#cdb6ff" opacity="0.24"/>';
   // back halves of the orbit rings
   for(let i=0;i<rings;i++) s += '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+RX[i]+'" ry="'+RY[i]+'" transform="rotate('+angles[i]+' '+cx+' '+cy+')" fill="none" stroke="'+RING[i]+'" stroke-width="3.5" opacity="0.9"/>';
   // feet

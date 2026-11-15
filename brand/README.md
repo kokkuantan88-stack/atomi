@@ -38,19 +38,19 @@ The logo is the atom mark (a nucleus with three orbits) beside the **Atomi** wor
 
 ## Colour
 
-The brand look is **Cosmic lab**: a night-sky science lab where Atomi glows. Colours are tokens with two themes. **Cosmic** (dark) is the default everywhere; **Daylight** (light) is for printing and for students who switch it on.
+The brand look is **Pastel cosmic**: a soft, dreamy night sky where Atomi glows. Every colour is a pastel version of space: dusky lavender instead of black, butter-yellow stars, candy-coloured planets. Colours are tokens with two themes. **Cosmic** (dark) is the default everywhere; **Daylight** (light) is for printing and for students who switch it on.
 
 Three hero colours:
 
-- **Space navy** (`surface`, `surface-raised`, `surface-panel`): the backgrounds. Layers get slightly lighter as they come forward.
-- **Star yellow** (`star`): the primary button, XP, stars and rewards. Text on it is always `on-star`. One star-yellow button per screen.
-- **Glowing purple** (`brand`): the wordmark, links, orbit rings, the XP bar fill and focus rings.
+- **Dusky lavender** (`surface`, `surface-raised`, `surface-panel`): the backgrounds, a soft purple night sky. Layers get slightly lighter as they come forward.
+- **Butter star** (`star`): the primary button, XP, stars and rewards. Text on it is always `on-star`. One star-yellow button per screen.
+- **Pastel purple** (`brand`): the wordmark, links, orbit rings, the XP bar fill and focus rings.
 
 Atomi keeps their **cream** body (`cream`) and **blush** cheeks in both themes, so the mascot shines against the dark sky.
 
 Supporting colours (`lavender`, `pink`, `sky`, `mint`, `coral`) are for illustrations, planets, stickers and confetti. They are not text colours.
 
-**Subjects** each own a colour so students always know where they are: Physics = `physics` (sky blue), Chemistry = `chemistry` (coral), Biology = `biology` (green), Practical = `practical` (yellow). Use the strong token for text and borders and the `-soft` token for fills behind that text.
+**Subjects** each own a colour so students always know where they are: Physics = `physics` (baby blue), Chemistry = `chemistry` (peach), Biology = `biology` (pistachio), Practical = `practical` (butter yellow). Use the strong token for text and borders and the `-soft` token for fills behind that text.
 
 **States**: `good` for correct answers and "Learned", `bad` for wrong answers. Always pair the colour with a word or tick, never colour alone.
 
@@ -68,7 +68,7 @@ All text tokens meet 4.5:1 contrast on `surface`, `surface-raised` and `surface-
 
 - Corners are soft: `radius-md` for buttons and inputs, `radius-lg` for cards, `radius-pill` for chips and progress bars.
 - Spacing follows a 4 px base: `space-1` to `space-7`.
-- Depth comes from lighter layers, not heavy shadows. The `glow` shadow is reserved for the mascot, stickers and the one card you want noticed.
+- Depth comes from lighter layers, not heavy shadows. The `glow` shadow, a soft lavender halo, is reserved for the mascot, stickers and the one card you want noticed.
 
 ## Iconography and illustration
 

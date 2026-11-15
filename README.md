@@ -36,7 +36,7 @@ When the app runs as a Claude artifact on claude.ai, it uses the artifact's data
 
 ## Brand
 
-The brand kit lives in [`brand/`](brand/README.md). It uses the **Cosmic lab** look: deep space navy, glowing purple and star yellow, with Lexend and Nunito fonts. See [`brand/Mascot.md`](brand/Mascot.md) for Atomi's growth stages, moods and customisation.
+The brand kit lives in [`brand/`](brand/README.md). It uses the **Pastel cosmic** look: a dusky lavender night sky, pastel purple and butter-star yellow, with Lexend and Nunito fonts. See [`brand/Mascot.md`](brand/Mascot.md) for Atomi's growth stages, moods and customisation.
 
 ## Content note
 
