@@ -323,6 +323,7 @@ body{background-image:radial-gradient(2px 2px at 12% 18%,rgba(255,255,255,.5),tr
 </head>
 <body>
 <div class="wrap" id="app"><p class="muted">Loading Atomi…</p></div>
+<script src="supabase.js"></script>
 <script src="questions.js"></script>
 <script src="lessons.js"></script>
 <script src="lower.js"></script>
@@ -463,7 +464,9 @@ const THEMES = {
   nature:   {body:"#d6f5b0", blush:"#ff9f80", rings:["#4fbf63","#9be86a","#2f9a4f"], sprout:true},
   seasonal: {body:"#e3f4ff", blush:"#ff9bb0", rings:["#7cc7ff","#b9e3ff","#e9f6ff"], dots:"#ffffff", dotShape:"snow"},
   neon:     {body:"#c79bff", blush:"#ff5ad1", rings:["#ff5ad1","#3ff5ff","#d6ff3f"], dots:"#f0e3ff"},
-  cosmic:   {body:"#8a6cf0", blush:"#ff8fd8", rings:["#ffd84d","#ff7fd6","#43c3ff"], dots:"#ffd84d", dotShape:"star"}
+  cosmic:   {body:"#8a6cf0", blush:"#ff8fd8", rings:["#ffd84d","#ff7fd6","#43c3ff"], dots:"#ffd84d", dotShape:"star"},
+  holiday:  {body:"#fff3ea", blush:"#ff7a7a", rings:["#e8413a","#4fbf63","#ffd84d"], dots:"#e8413a", dotShape:"berry"},
+  kawaii:   {body:"#fff0f7", blush:"#ff8fc0", rings:["#ffb3e1","#cdb6ff","#ffd6ea"], dots:"#ff9fcb", dotShape:"heart"}
 };
 const WARDROBE = [
   {slot:"theme", label:"Themes", items:[
@@ -472,12 +475,15 @@ const WARDROBE = [
     {id:"nature", name:"Nature", req:{badge:"streak3"}, rarity:"rare"},
     {id:"seasonal", name:"Seasonal", req:{xp:1000}, rarity:"rare"},
     {id:"neon", name:"Neon", req:{badge:"streak7"}, rarity:"epic"},
-    {id:"cosmic", name:"Cosmic", req:{xp:1500}, rarity:"legendary"}]},
+    {id:"cosmic", name:"Cosmic", req:{xp:1500}, rarity:"legendary"},
+    {id:"holiday", name:"Holiday", req:{box:1}, rarity:"rare"},
+    {id:"kawaii", name:"Kawaii", req:{box:1}, rarity:"epic"}]},
   {slot:"hat", label:"Hats", items:[
     {id:"wizard", name:"Wizard hat", req:null},
     {id:"santa", name:"Santa hat", req:{xp:1000}, rarity:"rare"},
     {id:"crown", name:"Crown", req:{badge:"perfect"}, rarity:"legendary"},
-    {id:"frog", name:"Frog hat", req:{badge:"learn10"}, rarity:"epic"}]},
+    {id:"frog", name:"Frog hat", req:{badge:"learn10"}, rarity:"epic"},
+    {id:"grad", name:"Grad cap", req:{box:1}, rarity:"rare"}]},
   {slot:"band", label:"Headbands", items:[
     {id:"bunny", name:"Bunny ears", req:null},
     {id:"pinkbow", name:"Pink bow", req:{xp:500}, rarity:"common"},
@@ -497,9 +503,47 @@ const WARDROBE = [
     {id:"round", name:"Round glasses", req:null},
     {id:"heart", name:"Heart glasses", req:{xp:400}, rarity:"common"},
     {id:"goggles", name:"Lab goggles", req:{xp:1200}, rarity:"rare"},
-    {id:"pixel", name:"Pixel shades", req:{badge:"hundred"}, rarity:"epic"}]}
+    {id:"pixel", name:"Pixel shades", req:{badge:"hundred"}, rarity:"epic"},
+    {id:"sun", name:"Sunglasses", req:{box:1}, rarity:"common"}]},
+  {slot:"face", label:"Expressions", items:[
+    {id:"wink", name:"Wink", req:null},
+    {id:"excited", name:"Excited", req:{box:1}, rarity:"common"},
+    {id:"cheeky", name:"Cheeky", req:{box:1}, rarity:"common"},
+    {id:"blushing", name:"Blushing", req:{box:1}, rarity:"common"},
+    {id:"shy", name:"Shy", req:{box:1}, rarity:"common"},
+    {id:"surprised", name:"Surprised", req:{box:1}, rarity:"common"},
+    {id:"confused", name:"Confused", req:{box:1}, rarity:"common"},
+    {id:"sad", name:"Sad", req:{box:1}, rarity:"common"},
+    {id:"proud", name:"Proud", req:{box:1}, rarity:"rare"},
+    {id:"thinking", name:"Thinking", req:{box:1}, rarity:"rare"},
+    {id:"angry", name:"Angry", req:{box:1}, rarity:"rare"},
+    {id:"dizzy", name:"Dizzy", req:{box:1}, rarity:"rare"},
+    {id:"sick", name:"Sick", req:{box:1}, rarity:"epic"}]},
+  {slot:"outfit", label:"Outfits", items:[
+    {id:"bowtie", name:"Bow tie", req:{box:1}, rarity:"common"},
+    {id:"labcoat", name:"Lab coat", req:{box:1}, rarity:"rare"},
+    {id:"medal", name:"Gold medal", req:{box:1}, rarity:"epic"}]},
+  {slot:"hold", label:"Held items", items:[
+    {id:"star", name:"Lucky star", req:null},
+    {id:"flask", name:"Flask", req:{box:1}, rarity:"common"},
+    {id:"book", name:"Textbook", req:{box:1}, rarity:"common"},
+    {id:"heart", name:"Heart", req:{box:1}, rarity:"rare"},
+    {id:"trophy", name:"Trophy", req:{box:1}, rarity:"epic"}]},
+  {slot:"fx", label:"Effects", items:[
+    {id:"sparkles", name:"Sparkles", req:null},
+    {id:"hearts", name:"Floating hearts", req:{box:1}, rarity:"common"},
+    {id:"notes", name:"Music notes", req:{box:1}, rarity:"common"},
+    {id:"bubbles", name:"Bubbles", req:{box:1}, rarity:"rare"},
+    {id:"stars", name:"Star shower", req:{box:1}, rarity:"rare"},
+    {id:"wings", name:"Wings", req:{box:1}, rarity:"legendary"}]},
+  {slot:"bg", label:"Backgrounds", items:[
+    {id:"sky", name:"Sky", req:null},
+    {id:"starry", name:"Starry night", req:{box:1}, rarity:"common"},
+    {id:"sunset", name:"Sunset", req:{box:1}, rarity:"rare"},
+    {id:"galaxy", name:"Galaxy", req:{box:1}, rarity:"epic"},
+    {id:"aurora", name:"Aurora", req:{box:1}, rarity:"legendary"}]}
 ];
-const DEFAULT_LOOK = {theme:"classic", hat:null, band:null, scarf:null, cape:null, glasses:null};
+const DEFAULT_LOOK = {theme:"classic", hat:null, band:null, scarf:null, cape:null, glasses:null, face:null, outfit:null, hold:null, fx:null, bg:null};
 function cleanLook(l){
   const out = Object.assign({}, DEFAULT_LOOK);
   if(!l || typeof l !== "object") return out;
@@ -527,6 +571,21 @@ function atomi(stage, md, opt){
   const top = cy - r*0.94;
   const wearsHat = !!look.hat;
   let s = '<svg class="atomi mood-'+md+'" viewBox="0 0 120 120" role="img" aria-label="Atomi, '+STAGES[stage].name+' stage, feeling '+moodWord+'"><defs><clipPath id="'+uid+'"><ellipse cx="'+cx+'" cy="'+cy+'" rx="'+r+'" ry="'+(r*0.94)+'"/></clipPath></defs><g class="bod"'+(md === "dim" ? ' opacity="0.75"' : '')+'>';
+  // background card
+  if(look.bg){
+    const BG = {sky:["#bfe6ff","#eef8ff"], starry:["#1d2a5c","#34479a"], sunset:["#ffb38a","#ff9fd6"], galaxy:["#2e1a5e","#7b3fe0"], aurora:["#10284a","#1f5d73"]}[look.bg];
+    s += '<defs><linearGradient id="'+uid+'bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+BG[0]+'"/><stop offset="1" stop-color="'+BG[1]+'"/></linearGradient></defs><rect x="1" y="1" width="118" height="118" rx="18" fill="url(#'+uid+'bg)"/>';
+    if(look.bg === "sky") s += '<g fill="#fff" opacity="0.9"><ellipse cx="22" cy="24" rx="12" ry="5"/><ellipse cx="30" cy="20" rx="8" ry="6"/><ellipse cx="94" cy="104" rx="14" ry="5"/><ellipse cx="100" cy="100" rx="8" ry="5"/></g>';
+    else if(look.bg === "sunset") s += '<circle cx="96" cy="26" r="11" fill="#ffe490" opacity="0.9"/><path d="M1 96 Q30 86 60 96 T119 94 L119 101 Q119 119 101 119 L19 119 Q1 119 1 101 Z" fill="#c86fc9" opacity="0.5"/>';
+    else if(look.bg === "aurora") s += '<path d="M1 40 Q30 18 60 38 T119 30 L119 52 Q90 40 60 58 T1 56 Z" fill="#5ef0b0" opacity="0.35"/><path d="M1 58 Q35 42 64 60 T119 50 L119 64 Q88 56 62 72 T1 70 Z" fill="#b48cff" opacity="0.35"/>';
+    else if(look.bg === "galaxy") s += '<ellipse cx="40" cy="36" rx="34" ry="14" fill="#ff8fd8" opacity="0.25" transform="rotate(-20 40 36)"/><ellipse cx="86" cy="92" rx="30" ry="11" fill="#43c3ff" opacity="0.22" transform="rotate(-20 86 92)"/>';
+    if(look.bg !== "sky") [[14,16],[104,14],[10,64],[110,72],[24,106],[70,8],[90,112],[50,112]].forEach(([x, y], i) => { s += '<circle cx="'+x+'" cy="'+y+'" r="'+(i % 3 === 0 ? 1.6 : 1)+'" fill="#fff" opacity="0.85"/>'; });
+  }
+  if(look.fx === "wings"){
+    const wing = d => '<path d="'+d+'" fill="#ffffff" fill-opacity="0.9" stroke="#b9a6ff" stroke-width="2" stroke-linejoin="round"/>';
+    s += wing('M'+(cx-r*0.7)+' '+(cy-r*0.1)+' Q'+(cx-r*1.9)+' '+(cy-r*1.3)+' '+(cx-r*1.75)+' '+(cy-r*0.2)+' Q'+(cx-r*1.95)+' '+(cy+r*0.2)+' '+(cx-r*1.4)+' '+(cy+r*0.35)+' Q'+(cx-r*1.5)+' '+(cy+r*0.7)+' '+(cx-r*0.7)+' '+(cy+r*0.4)+' Z')+
+         wing('M'+(cx+r*0.7)+' '+(cy-r*0.1)+' Q'+(cx+r*1.9)+' '+(cy-r*1.3)+' '+(cx+r*1.75)+' '+(cy-r*0.2)+' Q'+(cx+r*1.95)+' '+(cy+r*0.2)+' '+(cx+r*1.4)+' '+(cy+r*0.35)+' Q'+(cx+r*1.5)+' '+(cy+r*0.7)+' '+(cx+r*0.7)+' '+(cy+r*0.4)+' Z');
+  }
   // glow (Supernova) and cape
   if(stage >= 4) s += '<circle cx="60" cy="66" r="56" fill="#cdb6ff" opacity="0.2"/>';
   const capeColour = look.cape ? CAPES[look.cape] : (stage >= 4 ? CAPES.purple : null);
@@ -554,13 +613,15 @@ function atomi(stage, md, opt){
       const x = cx + dx*r, y = cy + dy*r;
       if(T.dotShape === "star") s += star(x, y, 2.6*k, T.dots);
       else if(T.dotShape === "snow") s += '<path d="M'+(x-2.6*k)+' '+y+' L'+(x+2.6*k)+' '+y+' M'+x+' '+(y-2.6*k)+' L'+x+' '+(y+2.6*k)+' M'+(x-1.8*k)+' '+(y-1.8*k)+' L'+(x+1.8*k)+' '+(y+1.8*k)+' M'+(x+1.8*k)+' '+(y-1.8*k)+' L'+(x-1.8*k)+' '+(y+1.8*k)+'" stroke="#9ad7ff" stroke-width="1.1" stroke-linecap="round"/>';
+      else if(T.dotShape === "heart") s += heart(x, y, 2.6*k, T.dots, T.dots);
+      else if(T.dotShape === "berry") s += '<circle cx="'+x+'" cy="'+y+'" r="'+(2.2*k)+'" fill="'+((dx + dy) > 0 ? "#e8413a" : "#4fbf63")+'"/>';
       else s += '<circle cx="'+x+'" cy="'+y+'" r="'+(2.4*k)+'" fill="'+T.dots+'"/>';
     });
     s += '</g><ellipse cx="'+cx+'" cy="'+cy+'" rx="'+r+'" ry="'+(r*0.94)+'" fill="none" stroke="'+INK+'" stroke-width="2.5"/>';
   }
   s += '<ellipse cx="'+(cx-r*0.38)+'" cy="'+(cy-r*0.48)+'" rx="'+(r*0.2)+'" ry="'+(r*0.12)+'" fill="#fff" opacity="0.8"/>';
   // lab coat (Scientist)
-  if(stage === 3) s += '<path d="M'+(cx-r*0.86)+' '+(cy+r*0.42)+' Q'+cx+' '+(cy+r*1.12)+' '+(cx+r*0.86)+' '+(cy+r*0.42)+' L'+(cx+r*0.22)+' '+(cy+r*0.2)+' L'+cx+' '+(cy+r*0.5)+' L'+(cx-r*0.22)+' '+(cy+r*0.2)+' Z" fill="#ffffff" stroke="'+INK+'" stroke-width="2"/><circle cx="'+cx+'" cy="'+(cy+r*0.66)+'" r="1.6" fill="#43c3ff"/><circle cx="'+cx+'" cy="'+(cy+r*0.84)+'" r="1.6" fill="#43c3ff"/>';
+  if(stage === 3 || look.outfit === "labcoat") s += '<path d="M'+(cx-r*0.86)+' '+(cy+r*0.42)+' Q'+cx+' '+(cy+r*1.12)+' '+(cx+r*0.86)+' '+(cy+r*0.42)+' L'+(cx+r*0.22)+' '+(cy+r*0.2)+' L'+cx+' '+(cy+r*0.5)+' L'+(cx-r*0.22)+' '+(cy+r*0.2)+' Z" fill="#ffffff" stroke="'+INK+'" stroke-width="2"/><circle cx="'+cx+'" cy="'+(cy+r*0.66)+'" r="1.6" fill="#43c3ff"/><circle cx="'+cx+'" cy="'+(cy+r*0.84)+'" r="1.6" fill="#43c3ff"/>';
   // blanket (low energy)
   if(md === "dim") s += '<path d="M'+(cx-r-4)+' '+(cy+r*0.15)+' Q'+cx+' '+(cy-r*0.05)+' '+(cx+r+4)+' '+(cy+r*0.15)+' L'+(cx+r)+' '+(cy+r*0.95)+' Q'+cx+' '+(cy+r*1.15)+' '+(cx-r)+' '+(cy+r*0.95)+' Z" fill="#9f85fd" stroke="'+INK+'" stroke-width="2"/>';
   // scarf
@@ -570,35 +631,67 @@ function atomi(stage, md, opt){
     s += '<path d="M'+(cx-r*0.93)+' '+(cy+r*0.26)+' Q'+cx+' '+(cy+r*0.62)+' '+(cx+r*0.93)+' '+(cy+r*0.26)+' L'+(cx+r*0.86)+' '+(cy+r*0.52)+' Q'+cx+' '+(cy+r*0.88)+' '+(cx-r*0.86)+' '+(cy+r*0.52)+' Z" fill="'+sc+'" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/>';
     s += '<path d="M'+(cx-r*0.6)+' '+(cy+r*0.48)+' L'+(cx-r*0.54)+' '+(cy+r*0.68)+' M'+(cx-r*0.2)+' '+(cy+r*0.56)+' L'+(cx-r*0.17)+' '+(cy+r*0.78)+' M'+(cx+r*0.2)+' '+(cy+r*0.56)+' L'+(cx+r*0.17)+' '+(cy+r*0.78)+' M'+(cx+r*0.6)+' '+(cy+r*0.48)+' L'+(cx+r*0.54)+' '+(cy+r*0.68)+'" stroke="'+sl+'" stroke-width="'+(2.4*k)+'" stroke-linecap="round"/>';
   }
+  // outfits worn at the neck
+  if(look.outfit === "bowtie" && md !== "dim") s += bow(cx, cy+r*0.62, 6.5*k, "#e8413a");
+  if(look.outfit === "medal" && md !== "dim") s += '<path d="M'+(cx-r*0.32)+' '+(cy+r*0.3)+' L'+(cx-r*0.08)+' '+(cy+r*0.62)+' L'+(cx+r*0.08)+' '+(cy+r*0.62)+' L'+(cx+r*0.32)+' '+(cy+r*0.3)+'" fill="none" stroke="#2f7fd6" stroke-width="'+(3.4*k)+'" stroke-linejoin="round"/><circle cx="'+cx+'" cy="'+(cy+r*0.76)+'" r="'+(5.6*k)+'" fill="'+STAR+'" stroke="'+STAR_D+'" stroke-width="2"/>'+star(cx, cy+r*0.76, 3*k, "#fff6cc");
   // face
   const ex = 10*k, ey = cy - 3*k;
+  const face = (md === "happy" || md === "ready") ? look.face : null;
   s += '<ellipse cx="'+(cx-r*0.55)+'" cy="'+(cy+r*0.16)+'" rx="'+(5*k)+'" ry="'+(3.4*k)+'" fill="'+BLUSH+'" opacity="0.75"/><ellipse cx="'+(cx+r*0.55)+'" cy="'+(cy+r*0.16)+'" rx="'+(5*k)+'" ry="'+(3.4*k)+'" fill="'+BLUSH+'" opacity="0.75"/>';
-  const eye = x => {
-    if(md === "happy") return '<path d="M'+(x-3.8*k)+' '+(ey+1.5*k)+' Q'+x+' '+(ey-4.5*k)+' '+(x+3.8*k)+' '+(ey+1.5*k)+'" stroke="'+INK+'" stroke-width="'+(2.4*k)+'" fill="none" stroke-linecap="round"/>';
-    if(md === "sleepy" || md === "dim") return '<path d="M'+(x-3.8*k)+' '+ey+' Q'+x+' '+(ey+3.5*k)+' '+(x+3.8*k)+' '+ey+'" stroke="'+INK+'" stroke-width="'+(2.2*k)+'" fill="none" stroke-linecap="round"/>';
-    return '<circle cx="'+x+'" cy="'+ey+'" r="'+(3.6*k)+'" fill="'+INK+'"/><circle cx="'+(x+1.1*k)+'" cy="'+(ey-1.2*k)+'" r="'+(1.2*k)+'" fill="#fff"/>';
+  const dotEye = (x, dx, dy, rr) => '<circle cx="'+(x+(dx||0)*k)+'" cy="'+(ey+(dy||0)*k)+'" r="'+((rr||3.6)*k)+'" fill="'+INK+'"/><circle cx="'+(x+(dx||0)*k+1.1*k)+'" cy="'+(ey+(dy||0)*k-1.2*k)+'" r="'+(1.2*k)+'" fill="#fff"/>';
+  const arcEye = (x, up) => '<path d="M'+(x-3.8*k)+' '+(ey+(up?1.5:0)*k)+' Q'+x+' '+(ey+(up?-4.5:3.5)*k)+' '+(x+3.8*k)+' '+(ey+(up?1.5:0)*k)+'" stroke="'+INK+'" stroke-width="'+(2.4*k)+'" fill="none" stroke-linecap="round"/>';
+  const line = (d, w) => '<path d="'+d+'" stroke="'+INK+'" stroke-width="'+((w||2.2)*k)+'" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  const L = cx-ex, R = cx+ex, my = cy + 6*k;
+  const smile = line('M'+(cx-4*k)+' '+my+' Q'+cx+' '+(my+4.5*k)+' '+(cx+4*k)+' '+my);
+  const openSmile = '<path d="M'+(cx-5*k)+' '+my+' Q'+cx+' '+(my+8*k)+' '+(cx+5*k)+' '+my+' Z" fill="'+INK+'" stroke="'+INK+'" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="'+cx+'" cy="'+(my+3.6*k)+'" rx="'+(2.4*k)+'" ry="'+(1.4*k)+'" fill="#ff8fa3"/>';
+  const frown = line('M'+(cx-4*k)+' '+(my+3*k)+' Q'+cx+' '+(my-1.5*k)+' '+(cx+4*k)+' '+(my+3*k));
+  const wavy = line('M'+(cx-5*k)+' '+(my+1.5*k)+' q'+(1.25*k)+' '+(-2*k)+' '+(2.5*k)+' 0 t'+(2.5*k)+' 0 t'+(2.5*k)+' 0 t'+(2.5*k)+' 0', 1.8);
+  const spiral = x => line('M'+x+' '+ey+' m'+(-0.8*k)+' 0 a'+(0.8*k)+' '+(0.8*k)+' 0 1 1 '+(1.6*k)+' 0 a'+(1.8*k)+' '+(1.8*k)+' 0 1 1 '+(-3.4*k)+' 0 a'+(2.6*k)+' '+(2.6*k)+' 0 1 1 '+(5.4*k)+' 0', 1.5);
+  const FACES = {
+    wink: () => dotEye(L) + arcEye(R, true) + openSmile,
+    excited: () => dotEye(L, 0, 0, 4.4) + dotEye(R, 0, 0, 4.4) + '<circle cx="'+(L-1.4*k)+'" cy="'+(ey+1.6*k)+'" r="'+(0.8*k)+'" fill="#fff"/><circle cx="'+(R-1.4*k)+'" cy="'+(ey+1.6*k)+'" r="'+(0.8*k)+'" fill="#fff"/>' + openSmile + '<path d="M'+(cx-r*0.95)+' '+(cy-r*0.75)+' l'+(-3*k)+' '+(-3*k)+' M'+(cx+r*0.95)+' '+(cy-r*0.75)+' l'+(3*k)+' '+(-3*k)+' M'+(cx-r*1.1)+' '+(cy-r*0.45)+' l'+(-3.5*k)+' 0 M'+(cx+r*1.1)+' '+(cy-r*0.45)+' l'+(3.5*k)+' 0" stroke="#ffd84d" stroke-width="'+(2*k)+'" stroke-linecap="round"/>',
+    cheeky: () => dotEye(L) + arcEye(R, true) + smile + '<path d="M'+(cx-0.5*k)+' '+(my+2.2*k)+' q'+(2*k)+' '+(4.5*k)+' '+(4*k)+' 0" fill="#ff7a9a" stroke="'+INK+'" stroke-width="'+(1.4*k)+'"/>',
+    blushing: () => arcEye(L, true) + arcEye(R, true) + smile + line('M'+(cx-r*0.68)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k)+' M'+(cx-r*0.55)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k)+' M'+(cx-r*0.42)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k)+' M'+(cx+r*0.42)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k)+' M'+(cx+r*0.55)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k)+' M'+(cx+r*0.68)+' '+(cy+r*0.12)+' l'+(1.6*k)+' '+(-2.4*k), 1.2),
+    shy: () => dotEye(L, -0.5, 1.6, 3) + dotEye(R, -0.5, 1.6, 3) + wavy,
+    proud: () => arcEye(L, false) + arcEye(R, false) + line('M'+(cx-5*k)+' '+my+' Q'+(cx+1*k)+' '+(my+5*k)+' '+(cx+5.5*k)+' '+(my-1.5*k)),
+    surprised: () => '<circle cx="'+L+'" cy="'+ey+'" r="'+(4.2*k)+'" fill="#fff" stroke="'+INK+'" stroke-width="'+(1.8*k)+'"/><circle cx="'+L+'" cy="'+ey+'" r="'+(1.8*k)+'" fill="'+INK+'"/><circle cx="'+R+'" cy="'+ey+'" r="'+(4.2*k)+'" fill="#fff" stroke="'+INK+'" stroke-width="'+(1.8*k)+'"/><circle cx="'+R+'" cy="'+ey+'" r="'+(1.8*k)+'" fill="'+INK+'"/><ellipse cx="'+cx+'" cy="'+(my+2*k)+'" rx="'+(2.6*k)+'" ry="'+(3.4*k)+'" fill="'+INK+'"/>',
+    confused: () => dotEye(L, 0, 0, 3) + dotEye(R, 0, -0.5, 4.2) + wavy + '<text x="'+(cx+r*0.8)+'" y="'+(cy-r*0.72)+'" font-family="Lexend,sans-serif" font-weight="700" font-size="'+(13*k)+'" fill="#9a6bff" stroke="#fff" stroke-width="0.6">?</text>',
+    sad: () => dotEye(L, 0, 0.6) + dotEye(R, 0, 0.6) + frown + '<path d="M'+(R+2.5*k)+' '+(ey+4*k)+' q'+(-1.6*k)+' '+(3*k)+' 0 '+(4.4*k)+' q'+(1.6*k)+' '+(-1.4*k)+' 0 '+(-4.4*k)+'Z" fill="#7cc7ff" stroke="#2f7fd6" stroke-width="1"/>',
+    thinking: () => dotEye(L, 1.4, -1.6, 3.2) + dotEye(R, 1.4, -1.6, 3.2) + line('M'+(cx-2*k)+' '+(my+1.5*k)+' L'+(cx+4*k)+' '+(my+0.5*k)) + '<circle cx="'+(cx+r*0.82)+'" cy="'+(cy-r*0.75)+'" r="'+(1.6*k)+'" fill="#cbc2ea"/><circle cx="'+(cx+r*1.02)+'" cy="'+(cy-r*1.0)+'" r="'+(2.4*k)+'" fill="#cbc2ea"/>',
+    angry: () => dotEye(L, 0, 1) + dotEye(R, 0, 1) + line('M'+(L-4*k)+' '+(ey-5.5*k)+' L'+(L+3.5*k)+' '+(ey-3*k)+' M'+(R+4*k)+' '+(ey-5.5*k)+' L'+(R-3.5*k)+' '+(ey-3*k), 2.4) + frown + '<path d="M'+(cx+r*0.6)+' '+(cy-r*0.72)+' l'+(2*k)+' '+(2*k)+' m0 '+(-2*k)+' l'+(-2*k)+' '+(2*k)+'" stroke="#e8413a" stroke-width="'+(2*k)+'" stroke-linecap="round"/>',
+    dizzy: () => spiral(L) + spiral(R) + wavy,
+    sick: () => '<ellipse cx="'+cx+'" cy="'+(cy+r*0.05)+'" rx="'+(r*0.72)+'" ry="'+(r*0.42)+'" fill="#9be86a" opacity="0.35"/>' + line('M'+(L-3.6*k)+' '+ey+' L'+(L+3.6*k)+' '+ey, 2.2) + line('M'+(R-3.6*k)+' '+ey+' L'+(R+3.6*k)+' '+ey, 2.2) + wavy
   };
-  s += eye(cx-ex) + eye(cx+ex);
-  const my = cy + 6*k;
-  if(md === "happy") s += '<path d="M'+(cx-5*k)+' '+my+' Q'+cx+' '+(my+8*k)+' '+(cx+5*k)+' '+my+' Z" fill="'+INK+'" stroke="'+INK+'" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="'+cx+'" cy="'+(my+3.6*k)+'" rx="'+(2.4*k)+'" ry="'+(1.4*k)+'" fill="#ff8fa3"/>';
-  else if(md === "ready") s += '<path d="M'+(cx-4*k)+' '+my+' Q'+cx+' '+(my+4.5*k)+' '+(cx+4*k)+' '+my+'" stroke="'+INK+'" stroke-width="'+(2.2*k)+'" fill="none" stroke-linecap="round"/>';
-  else if(md === "sleepy") s += '<ellipse cx="'+cx+'" cy="'+(my+1.5*k)+'" rx="'+(2.6*k)+'" ry="'+(3.2*k)+'" fill="'+INK+'"/><text x="90" y="30" font-family="Lexend, sans-serif" font-size="13" font-weight="600" fill="#b9b0dd">z z</text>';
-  else s += '<path d="M'+(cx-3*k)+' '+(my+1*k)+' L'+(cx+3*k)+' '+(my+1*k)+'" stroke="'+INK+'" stroke-width="'+(2*k)+'" stroke-linecap="round"/>';
+  if(face && FACES[face]) s += FACES[face]();
+  else {
+    const eye = x => {
+      if(md === "happy") return arcEye(x, true);
+      if(md === "sleepy" || md === "dim") return '<path d="M'+(x-3.8*k)+' '+ey+' Q'+x+' '+(ey+3.5*k)+' '+(x+3.8*k)+' '+ey+'" stroke="'+INK+'" stroke-width="'+(2.2*k)+'" fill="none" stroke-linecap="round"/>';
+      return dotEye(x);
+    };
+    s += eye(L) + eye(R);
+    if(md === "happy") s += openSmile;
+    else if(md === "ready") s += smile;
+    else if(md === "sleepy") s += '<ellipse cx="'+cx+'" cy="'+(my+1.5*k)+'" rx="'+(2.6*k)+'" ry="'+(3.2*k)+'" fill="'+INK+'"/><text x="90" y="30" font-family="Lexend, sans-serif" font-size="13" font-weight="600" fill="#b9b0dd">z z</text>';
+    else s += '<path d="M'+(cx-3*k)+' '+(my+1*k)+' L'+(cx+3*k)+' '+(my+1*k)+'" stroke="'+INK+'" stroke-width="'+(2*k)+'" stroke-linecap="round"/>';
+  }
   // glasses: chosen ones replace the stage outfit's goggles and glasses
   const gr = 6.8*k;
   if(look.glasses === "round") s += '<circle cx="'+(cx-ex)+'" cy="'+ey+'" r="'+gr+'" fill="#fff" fill-opacity="0.15" stroke="#f4ab00" stroke-width="'+(2.4*k)+'"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="'+gr+'" fill="#fff" fill-opacity="0.15" stroke="#f4ab00" stroke-width="'+(2.4*k)+'"/><path d="M'+(cx-ex+gr)+' '+ey+' L'+(cx+ex-gr)+' '+ey+'" stroke="#f4ab00" stroke-width="'+(2.2*k)+'"/>';
   else if(look.glasses === "heart") s += heart(cx-ex, ey, 6.4*k, "#ff5a9e", "#c2185b") + heart(cx+ex, ey, 6.4*k, "#ff5a9e", "#c2185b") + '<path d="M'+(cx-ex+5*k)+' '+(ey-1*k)+' L'+(cx+ex-5*k)+' '+(ey-1*k)+'" stroke="#c2185b" stroke-width="'+(2*k)+'"/>';
   else if(look.glasses === "goggles") s += '<path d="M'+(cx-r+1)+' '+ey+' L'+(cx+r-1)+' '+ey+'" stroke="#8a5a3c" stroke-width="'+(3*k)+'"/><circle cx="'+(cx-ex)+'" cy="'+ey+'" r="'+(7.4*k)+'" fill="#8fd3ff" fill-opacity="0.55" stroke="#c0622d" stroke-width="'+(3*k)+'"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="'+(7.4*k)+'" fill="#8fd3ff" fill-opacity="0.55" stroke="#c0622d" stroke-width="'+(3*k)+'"/>';
+  else if(look.glasses === "sun") s += '<path d="M'+(cx-ex+gr)+' '+(ey-1*k)+' Q'+cx+' '+(ey-4*k)+' '+(cx+ex-gr)+' '+(ey-1*k)+'" stroke="#111" stroke-width="'+(2.2*k)+'" fill="none"/><circle cx="'+(cx-ex)+'" cy="'+ey+'" r="'+(gr+0.6*k)+'" fill="#1b1b2a" stroke="#111" stroke-width="'+(1.6*k)+'"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="'+(gr+0.6*k)+'" fill="#1b1b2a" stroke="#111" stroke-width="'+(1.6*k)+'"/><path d="M'+(cx-ex-3*k)+' '+(ey-2.5*k)+' l'+(2.5*k)+' '+(-1.5*k)+' M'+(cx+ex-3*k)+' '+(ey-2.5*k)+' l'+(2.5*k)+' '+(-1.5*k)+'" stroke="#fff" stroke-width="'+(1.4*k)+'" stroke-linecap="round"/>';
   else if(look.glasses === "pixel") s += '<path d="M'+(cx-ex-8*k)+' '+(ey-3.5*k)+' L'+(cx+ex+8*k)+' '+(ey-3.5*k)+'" stroke="#111" stroke-width="'+(2*k)+'"/><rect x="'+(cx-ex-7.5*k)+'" y="'+(ey-3.5*k)+'" width="'+(14*k)+'" height="'+(7*k)+'" fill="#111"/><rect x="'+(cx+ex-6.5*k)+'" y="'+(ey-3.5*k)+'" width="'+(14*k)+'" height="'+(7*k)+'" fill="#111"/><rect x="'+(cx-ex-5*k)+'" y="'+(ey-2*k)+'" width="'+(2.4*k)+'" height="'+(2.4*k)+'" fill="#fff"/><rect x="'+(cx+ex-4*k)+'" y="'+(ey-2*k)+'" width="'+(2.4*k)+'" height="'+(2.4*k)+'" fill="#fff"/>';
   else {
     if(stage === 2 && !look.hat && !look.band) s += '<path d="M'+(cx-r+2)+' '+(cy-r*0.52)+' Q'+cx+' '+(cy-r*0.7)+' '+(cx+r-2)+' '+(cy-r*0.52)+'" stroke="#7b3fe0" stroke-width="3" fill="none"/><circle cx="'+(cx-9)+'" cy="'+(cy-r*0.6)+'" r="6.5" fill="'+STAR+'" fill-opacity="0.6" stroke="#7b3fe0" stroke-width="2.5"/><circle cx="'+(cx+9)+'" cy="'+(cy-r*0.6)+'" r="6.5" fill="'+STAR+'" fill-opacity="0.6" stroke="#7b3fe0" stroke-width="2.5"/>';
-    if(stage === 3 || (opt.goggles && stage !== 2)) s += '<circle cx="'+(cx-ex)+'" cy="'+ey+'" r="'+gr+'" fill="#bfe9ff" fill-opacity="0.35" stroke="#2f7fd6" stroke-width="'+(2.4*k)+'"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="'+gr+'" fill="#bfe9ff" fill-opacity="0.35" stroke="#2f7fd6" stroke-width="'+(2.4*k)+'"/><path d="M'+(cx-ex+gr)+' '+ey+' L'+(cx+ex-gr)+' '+ey+'" stroke="#2f7fd6" stroke-width="'+(2.2*k)+'"/>';
+    if((stage === 3 && !face) || (opt.goggles && stage !== 2)) s += '<circle cx="'+(cx-ex)+'" cy="'+ey+'" r="'+gr+'" fill="#bfe9ff" fill-opacity="0.35" stroke="#2f7fd6" stroke-width="'+(2.4*k)+'"/><circle cx="'+(cx+ex)+'" cy="'+ey+'" r="'+gr+'" fill="#bfe9ff" fill-opacity="0.35" stroke="#2f7fd6" stroke-width="'+(2.4*k)+'"/><path d="M'+(cx-ex+gr)+' '+ey+' L'+(cx+ex-gr)+' '+ey+'" stroke="#2f7fd6" stroke-width="'+(2.2*k)+'"/>';
   }
   // hats
   if(look.hat === "wizard") s += '<path d="M'+(cx-r*0.72)+' '+(top+r*0.36)+' L'+(cx+r*0.12)+' '+(top-r*1.2)+' L'+(cx+r*0.72)+' '+(top+r*0.36)+' Z" fill="#3d6fe0" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/><ellipse cx="'+cx+'" cy="'+(top+r*0.38)+'" rx="'+(r*0.98)+'" ry="'+(r*0.17)+'" fill="#2f58c4" stroke="'+INK+'" stroke-width="2"/>'+star(cx-r*0.12, top-r*0.15, 3.6*k, STAR)+star(cx+r*0.25, top-r*0.55, 2.8*k, STAR)+star(cx+r*0.3, top+r*0.12, 2.2*k, STAR);
   else if(look.hat === "santa") s += '<path d="M'+(cx-r*0.8)+' '+(top+r*0.36)+' Q'+(cx-r*0.25)+' '+(top-r*0.95)+' '+(cx+r*0.82)+' '+(top-r*0.45)+' Q'+(cx+r*0.5)+' '+(top-r*0.2)+' '+(cx+r*0.78)+' '+(top+r*0.36)+' Z" fill="#e8413a" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/><rect x="'+(cx-r*0.9)+'" y="'+(top+r*0.22)+'" width="'+(r*1.8)+'" height="'+(r*0.3)+'" rx="'+(r*0.15)+'" fill="#ffffff" stroke="'+INK+'" stroke-width="2"/><circle cx="'+(cx+r*0.86)+'" cy="'+(top-r*0.45)+'" r="'+(r*0.17)+'" fill="#ffffff" stroke="'+INK+'" stroke-width="2"/>';
   else if(look.hat === "crown") s += '<path d="M'+(cx-r*0.55)+' '+(top+r*0.32)+' L'+(cx-r*0.58)+' '+(top-r*0.28)+' L'+(cx-r*0.28)+' '+(top+r*0.02)+' L'+cx+' '+(top-r*0.42)+' L'+(cx+r*0.28)+' '+(top+r*0.02)+' L'+(cx+r*0.58)+' '+(top-r*0.28)+' L'+(cx+r*0.55)+' '+(top+r*0.32)+' Z" fill="'+STAR+'" stroke="'+STAR_D+'" stroke-width="2" stroke-linejoin="round"/><circle cx="'+cx+'" cy="'+(top+r*0.14)+'" r="'+(2.8*k)+'" fill="#e8413a"/><circle cx="'+(cx-r*0.58)+'" cy="'+(top-r*0.3)+'" r="'+(1.8*k)+'" fill="#43c3ff"/><circle cx="'+(cx+r*0.58)+'" cy="'+(top-r*0.3)+'" r="'+(1.8*k)+'" fill="#43c3ff"/>';
   else if(look.hat === "frog") s += '<path d="M'+(cx-r*0.95)+' '+(top+r*0.62)+' Q'+cx+' '+(top-r*0.5)+' '+(cx+r*0.95)+' '+(top+r*0.62)+' Z" fill="#5cc96b" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/><circle cx="'+(cx-r*0.42)+'" cy="'+(top-r*0.02)+'" r="'+(r*0.24)+'" fill="#5cc96b" stroke="'+INK+'" stroke-width="2"/><circle cx="'+(cx+r*0.42)+'" cy="'+(top-r*0.02)+'" r="'+(r*0.24)+'" fill="#5cc96b" stroke="'+INK+'" stroke-width="2"/><circle cx="'+(cx-r*0.42)+'" cy="'+(top-r*0.04)+'" r="'+(r*0.13)+'" fill="#fff"/><circle cx="'+(cx+r*0.42)+'" cy="'+(top-r*0.04)+'" r="'+(r*0.13)+'" fill="#fff"/><circle cx="'+(cx-r*0.4)+'" cy="'+(top-r*0.02)+'" r="'+(r*0.07)+'" fill="'+INK+'"/><circle cx="'+(cx+r*0.44)+'" cy="'+(top-r*0.02)+'" r="'+(r*0.07)+'" fill="'+INK+'"/><path d="M'+(cx-r*0.3)+' '+(top+r*0.4)+' Q'+cx+' '+(top+r*0.52)+' '+(cx+r*0.3)+' '+(top+r*0.4)+'" stroke="'+INK+'" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  else if(look.hat === "grad") s += '<path d="M'+(cx-r*0.62)+' '+(top+r*0.42)+' L'+(cx-r*0.6)+' '+(top+r*0.02)+' L'+(cx+r*0.6)+' '+(top+r*0.02)+' L'+(cx+r*0.62)+' '+(top+r*0.42)+' Q'+cx+' '+(top+r*0.58)+' '+(cx-r*0.62)+' '+(top+r*0.42)+' Z" fill="#2f2a55" stroke="'+INK+'" stroke-width="2"/><path d="M'+(cx-r*1.15)+' '+(top-r*0.02)+' L'+cx+' '+(top-r*0.42)+' L'+(cx+r*1.15)+' '+(top-r*0.02)+' L'+cx+' '+(top+r*0.32)+' Z" fill="#3d3570" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/><path d="M'+cx+' '+(top-r*0.05)+' L'+(cx+r*0.82)+' '+(top+r*0.08)+' L'+(cx+r*0.86)+' '+(top+r*0.62)+'" stroke="'+STAR+'" stroke-width="'+(1.8*k)+'" fill="none"/><circle cx="'+(cx+r*0.86)+'" cy="'+(top+r*0.66)+'" r="'+(2.4*k)+'" fill="'+STAR+'"/>';
   // headbands (the antenna stays)
   if(look.band === "bunny") s += '<g transform="rotate(-16 '+(cx-r*0.42)+' '+(top+r*0.1)+')"><ellipse cx="'+(cx-r*0.42)+'" cy="'+(top-r*0.38)+'" rx="'+(r*0.18)+'" ry="'+(r*0.52)+'" fill="#fff" stroke="'+INK+'" stroke-width="2"/><ellipse cx="'+(cx-r*0.42)+'" cy="'+(top-r*0.36)+'" rx="'+(r*0.08)+'" ry="'+(r*0.36)+'" fill="#ffb3c8"/></g><g transform="rotate(16 '+(cx+r*0.42)+' '+(top+r*0.1)+')"><ellipse cx="'+(cx+r*0.42)+'" cy="'+(top-r*0.38)+'" rx="'+(r*0.18)+'" ry="'+(r*0.52)+'" fill="#fff" stroke="'+INK+'" stroke-width="2"/><ellipse cx="'+(cx+r*0.42)+'" cy="'+(top-r*0.36)+'" rx="'+(r*0.08)+'" ry="'+(r*0.36)+'" fill="#ffb3c8"/></g>';
   else if(look.band === "pinkbow") s += bow(cx+r*0.55, top+r*0.3, 7*k, "#ff7fd6");
@@ -616,10 +709,21 @@ function atomi(stage, md, opt){
     for(let i=0;i<rings;i++) s += '<g transform="rotate('+angles[i]+' '+cx+' '+cy+')"><path d="M'+(cx-RX[i])+' '+cy+' A'+RX[i]+' '+RY[i]+' 0 0 0 '+(cx+RX[i])+' '+cy+'" fill="none" stroke="'+RING[i]+'" stroke-width="3.5"/><circle cx="'+(cx+RX[i])+'" cy="'+cy+'" r="4" fill="'+STAR+'"/></g>';
     s += '</g>';
   }
-  // flask (Scientist and up)
-  if(stage >= 3) s += '<path d="M97 80 L97 88 L91 101 Q90 104 93 104 L109 104 Q112 104 111 101 L105 88 L105 80 Z" fill="#dff6ff" stroke="'+INK+'" stroke-width="2"/><path d="M93 97 L109 97 L111 101 Q112 104 109 104 L93 104 Q90 104 91 101 Z" fill="#43c3ff"/>';
-  // sparkles
-  if(stage === 0 || md === "happy") s += star(22, 34, 5, STAR) + star(100, 26, 4, "#ff7fd6");
+  // held item (the Scientist's flask by default)
+  const held = look.hold || (stage >= 3 ? "flask" : null);
+  if(held === "star") s += '<g transform="rotate(12 101 92)">'+'<path d="M101 77 L105 87 L116 88 L108 95 L110 106 L101 100 L92 106 L94 95 L86 88 L97 87 Z" fill="'+STAR+'" stroke="'+STAR_D+'" stroke-width="2" stroke-linejoin="round"/><circle cx="98" cy="91" r="1.4" fill="'+INK+'"/><circle cx="104" cy="91" r="1.4" fill="'+INK+'"/></g>';
+  else if(held === "heart") s += heart(101, 93, 10, "#ff7fb0", "#c2185b");
+  else if(held === "book") s += '<g transform="rotate(-10 101 93)"><rect x="89" y="82" width="24" height="20" rx="2" fill="#5b8def" stroke="'+INK+'" stroke-width="2"/><path d="M101 82 L101 102" stroke="'+INK+'" stroke-width="1.6"/><path d="M93 87 L98 87 M93 91 L98 91 M104 87 L109 87" stroke="#dfe9ff" stroke-width="1.6" stroke-linecap="round"/></g>';
+  else if(held === "trophy") s += '<path d="M92 80 L110 80 L109 89 Q107 96 101 97 Q95 96 93 89 Z" fill="'+STAR+'" stroke="'+STAR_D+'" stroke-width="2" stroke-linejoin="round"/><path d="M92 82 Q86 82 88 88 Q90 91 94 90 M110 82 Q116 82 114 88 Q112 91 108 90" fill="none" stroke="'+STAR_D+'" stroke-width="2"/><rect x="99" y="97" width="4" height="4" fill="'+STAR_D+'"/><rect x="94" y="101" width="14" height="4" rx="1.5" fill="#8a5a3c" stroke="'+INK+'" stroke-width="1.4"/>';
+  else if(held === "flask") s += '<path d="M97 80 L97 88 L91 101 Q90 104 93 104 L109 104 Q112 104 111 101 L105 88 L105 80 Z" fill="#dff6ff" stroke="'+INK+'" stroke-width="2"/><path d="M93 97 L109 97 L111 101 Q112 104 109 104 L93 104 Q90 104 91 101 Z" fill="#43c3ff"/>';
+  // sparkles and chosen effects
+  if((stage === 0 || md === "happy") && !look.fx) s += star(22, 34, 5, STAR) + star(100, 26, 4, "#ff7fd6");
+  const fxAt = [[18,30],[102,24],[12,58],[108,60],[26,96]];
+  if(look.fx === "sparkles") fxAt.forEach(([x, y], i) => { s += star(x, y, i % 2 ? 4 : 5.5, i % 2 ? "#ff7fd6" : STAR); });
+  else if(look.fx === "stars") [[14,22],[34,10],[60,6],[88,10],[106,22],[8,48],[112,44]].forEach(([x, y], i) => { s += star(x, y, 3 + (i % 3), [STAR, "#ffb3e1", "#9fd8ff"][i % 3]); });
+  else if(look.fx === "hearts") fxAt.slice(0, 4).forEach(([x, y], i) => { s += heart(x, y, 4.5, ["#ff7fb0","#ff9fcb","#ffb3e1","#ff7fb0"][i], "#c2185b"); });
+  else if(look.fx === "notes") [[18,32],[102,26],[14,74]].forEach(([x, y], i) => { s += '<g fill="'+["#7b3fe0","#2f7fd6","#e8413a"][i]+'"><ellipse cx="'+x+'" cy="'+(y+8)+'" rx="3.4" ry="2.6" transform="rotate(-20 '+x+' '+(y+8)+')"/><rect x="'+(x+2.4)+'" y="'+(y-3)+'" width="1.6" height="11"/><path d="M'+(x+4)+' '+(y-3)+' q5 2 4 7 q-1 -3 -4 -3 z"/></g>'; });
+  else if(look.fx === "bubbles") [[16,40,5],[24,24,3],[104,34,6],[110,64,3.5],[18,86,4]].forEach(([x, y, rr]) => { s += '<circle cx="'+x+'" cy="'+y+'" r="'+rr+'" fill="#bfe9ff" fill-opacity="0.4" stroke="#7cc7ff" stroke-width="1.4"/><circle cx="'+(x-rr*0.35)+'" cy="'+(y-rr*0.35)+'" r="'+(rr*0.25)+'" fill="#fff"/>'; });
   if(stage >= 4) s += star(16, 70, 5, STAR) + star(104, 50, 4, STAR) + star(30, 100, 3.5, "#ff7fd6");
   s += '</g></svg>';
   return s;

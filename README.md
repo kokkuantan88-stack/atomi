@@ -41,3 +41,11 @@ The brand kit lives in [`brand/`](brand/README.md). It uses the **Pastel cosmic*
 ## Content note
 
 Lessons and questions were written to follow published Year 3 and 4 IP outlines (Raffles Girls' School and ACS (Independent)). Please have a teacher or strong student check them against your school's syllabus.
+
+## Supabase (for the website version)
+
+Outside claude.ai, Atomi saves to the Supabase project `atomi` (`rjazdwtatjrumblqmopg`) through `supabase.js`:
+students get an account automatically (anonymous sign-in), and their progress, the leaderboard, friend codes
+and live battles (Supabase Realtime) all work. The database setup is in `supabase/schema.sql`; Row Level
+Security means each student can only change their own data. On claude.ai the app keeps using Claude's
+built-in storage and `supabase.js` does nothing.
