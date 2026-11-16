@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Atomi Science Quiz</title>
+<meta name="description" content="Learn secondary science with Atomi: lessons, quizzes, games and battles with friends.">
+<meta name="theme-color" content="#231d47">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Atomi">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -376,7 +385,7 @@ function stageOf(xp){ let s = 0; STAGES.forEach((st,i) => { if(xp >= st.xp) s = 
 /* ---------- state ---------- */
 function fresh(){
   return {v:1,name:"",level:3,xp:0,streak:0,lastDay:null,quizzes:0,weekKey:"",weekXp:0,
-    topics:{},review:{},badges:[],answered:0,correct:0,fixed:0,subjDone:{},hideBoard:false,learn:{},lastSubj:"phy",decks:[],best:{},games:0,wins:0,friends:[],friendCode:"",mute:false,story:{done:{}},owned:[],boxes:1,boxXp:0,look:{theme:"classic",hat:null,band:null,scarf:null,cape:null,glasses:null}};
+    topics:{},review:{},badges:[],answered:0,correct:0,fixed:0,subjDone:{},hideBoard:false,learn:{},lastSubj:"phy",decks:[],best:{},games:0,wins:0,friends:[],friendCode:"",mute:false,savedAt:0,story:{done:{}},owned:[],boxes:1,boxXp:0,look:{theme:"classic",hat:null,band:null,scarf:null,cape:null,glasses:null}};
 }
 let S = fresh();
 let mode = "local";          // "cloud" when saved to the artifact's database
@@ -393,6 +402,7 @@ function saveLocal(){ try{ localStorage.setItem(LKEY(), JSON.stringify(S)); }cat
 
 let saving = false, saveAgain = false;
 async function save(){
+  S.savedAt = Date.now();
   saveLocal();
   if(mode !== "cloud") return;
   if(saving){ saveAgain = true; return; }
@@ -1194,6 +1204,13 @@ function vMe(){
   h += '</div>'+xpLine()+'</section>';
   h += '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Badges ('+S.badges.length+' of '+BADGES.length+')</h2><div class="grid g2">'+
     BADGES.map(b => badgeHtml(b, S.badges.includes(b.id))).join("")+'</div></section>';
+  if(window.ATOMI_AUTH && !isStandalone()){
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    h += '<section class="card" style="display:flex;flex-direction:column;gap:10px"><h2>Get the Atomi app</h2>'+
+      (INSTALL_PROMPT ? '<p class="small muted">Add Atomi to your home screen. It opens full screen like a normal app and works without internet.</p><div><button class="btn btn-primary" data-act="install">Install Atomi</button></div>'
+       : ios ? '<p class="small muted">In Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. Atomi then opens full screen like a normal app.</p>'
+       : '<p class="small muted">Open your browser menu (⋮) and choose <b>Install app</b> or <b>Add to Home screen</b>. Atomi then opens full screen like a normal app.</p>')+'</section>';
+  }
   if(window.ATOMI_ACCOUNT) h += '<section class="card row between"><div><h2>Your account</h2><p class="small muted">Logged in as <b>'+esc(window.ATOMI_ACCOUNT.email)+'</b>. Log in with this email on any device to keep your progress.</p></div><button class="btn" data-act="logout">Log out</button></section>';
   h += '<section class="card" style="display:flex;flex-direction:column;gap:14px"><h2>Settings</h2>'+
     '<form id="nameform" class="row" style="align-items:flex-end"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px"><label for="nm" class="small" style="font-weight:800">Nickname (shown on the leaderboard)</label>'+
@@ -1260,6 +1277,7 @@ document.addEventListener("click", e => {
   else if(a === "dress-tab"){ DRESS.tab = b.dataset.slot; render(); }
   else if(a === "dress-back"){ DRESS.preview = null; DRESS.item = null; render(); }
   else if(a === "box-open") openBox();
+  else if(a === "install"){ if(INSTALL_PROMPT){ INSTALL_PROMPT.prompt(); INSTALL_PROMPT.userChoice.finally(() => { INSTALL_PROMPT = null; render(); }); } }
   else if(a === "logout"){ if(window.ATOMI_ACCOUNT) window.ATOMI_ACCOUNT.signOut(); }
   else if(a === "box-done"){ BOX = {phase:"idle", prize:null}; render(); }
   else if(a === "box-wear"){ const p = BOX.prize; BOX = {phase:"idle", prize:null}; if(p){ S.look = withItem(S.look, p.slot, p.it.id); DRESS.preview = null; DRESS.item = null; save(); pushBoard(); } render(); toast("Atomi is wearing it!"); }
@@ -1310,6 +1328,14 @@ function adopt(data){
   base.look = cleanLook(base.look);
   return base;
 }
+// Installable app (website version only; claude.ai pages don't register it)
+let INSTALL_PROMPT = null;
+const isStandalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); INSTALL_PROMPT = e; if(view === "me") render(); });
+window.addEventListener("appinstalled", () => { INSTALL_PROMPT = null; if(typeof toast === "function") toast("Atomi is on your home screen!"); });
+if(window.ATOMI_AUTH && "serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(e => console.warn("Service worker", e)));
+}
 async function boot(){
   render();
   // Website version: wait for the student to log in (supabase.js) before loading their progress.
@@ -1327,7 +1353,7 @@ async function boot(){
     if(UID){
       try{
         const snap = await withTimeout(DB.doc("data/users/"+UID+"/state").get(), 10000);
-        if(snap){ mode = "cloud"; if(snap.exists) S = adopt(snap.data()); else { try{ const g = JSON.parse(localStorage.getItem("atomi-quiz-local") || "null"); if(g && g.name) S = adopt(g); }catch(e){} } }
+        if(snap){ mode = "cloud"; if(snap.exists){ S = adopt(snap.data()); const mine = loadLocal(); if(mine && (mine.savedAt || 0) > (S.savedAt || 0)) S = adopt(mine); } else { try{ const g = JSON.parse(localStorage.getItem("atomi-quiz-local") || "null"); if(g && g.name) S = adopt(g); }catch(e){} } }
       }catch(e){ mode = "local"; }
     }
   }
